@@ -1,17 +1,10 @@
-# routes/cluster.py
-from flask import Blueprint, jsonify, request
-import numpy as np
-from sklearn.cluster import KMeans
+from flask import Blueprint, request, jsonify
+from ..services.clustering_service import run_kmeans
 
-bp = Blueprint('cluster', __name__)
+clustering_bp = Blueprint('clustering', __name__)
 
-@bp.route('/kmeans', methods=['POST'])
+@clustering_bp.route('/kmeans', methods=['POST'])
 def kmeans():
-    data = request.json
-    points = np.array(data['points'])
-    kmeans = KMeans(n_clusters=data.get('k', 3))
-    labels = kmeans.fit_predict(points)
-    return jsonify({
-        'labels': labels.tolist(),
-        'centers': kmeans.cluster_centers_.tolist()
-    })
+    data = request.get_json()
+    result = run_kmeans(data['points'], data['k'])
+    return jsonify(result)
