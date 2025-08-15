@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios from '@utils/axios'
 
 export const getAlgorithmIntro = (algorithm) => {
   return axios.get(`/api/clustering/intro/${algorithm}`)

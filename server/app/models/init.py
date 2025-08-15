@@ -1,4 +1,4 @@
-# server/app/models/__init__.py
+# server/app/models/init.py
 from .user import User, class_user
 from .class_model import Class
 from .report import Report
