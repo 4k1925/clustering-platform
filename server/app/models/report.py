@@ -9,8 +9,10 @@ class Report(db.Model):
     - 包含教师评分和反馈功能
     """
     __tablename__ = 'reports'
-    
+    __table_args__ = {'extend_existing': True} 
+   
     report_id = db.Column(db.Integer, primary_key=True)
+
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

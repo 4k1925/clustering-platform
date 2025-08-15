@@ -1,12 +1,20 @@
-from ..models import User
-from app import db
+from werkzeug.security import check_password_hash
+from app.models.user import User
+from app.extensions import db
 
-def register_user(data):
-    user = User(username=data['username'], password=data['password'])
-    db.session.add(user)
-    db.session.commit()
-    return user
+class AuthService:
+    @staticmethod
+    def authenticate(username, password):
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            return user
+        return None
 
-def login_user(data):
-    user = User.query.filter_by(username=data['username']).first()
-    return user if user and user.check_password(data['password']) else None
+    @staticmethod
+    def change_password(user_id, old_password, new_password):
+        user = User.query.get(user_id)
+        if user and check_password_hash(user.password_hash, old_password):
+            user.set_password(new_password)
+            db.session.commit()
+            return True
+        return False
