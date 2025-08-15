@@ -1,3 +1,4 @@
+// 认证状态
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
