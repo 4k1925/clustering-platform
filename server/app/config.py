@@ -1,13 +1,15 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
-
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 class Config:
     """基础配置"""
+    
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///../database/clustering.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///{BASE_DIR}/database/clustering.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-dev-secret-key')
     JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 3600))  # 1小时

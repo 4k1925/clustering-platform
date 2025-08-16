@@ -1,3 +1,4 @@
+// client/src/stores/auth.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,6 +11,15 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value)
   const isTeacher = computed(() => user.value?.role === 'teacher')
   const isStudent = computed(() => user.value?.role === 'student')
+
+  // 初始化函数改为内部使用
+  const initialize = () => {
+    const storedToken = localStorage.getItem('authToken')
+    if (storedToken) {
+      token.value = storedToken
+      // 这里可以添加验证token有效性的逻辑
+    }
+  }
 
   const setUser = (userData, authToken) => {
     user.value = userData
@@ -26,9 +36,8 @@ export const useAuthStore = defineStore('auth', () => {
   const loginUser = async (credentials) => {
     try {
       const response = await login(credentials)
-      setUser(response.user, response.access_token)
+      setUser(response.user, response.token) // 确保后端返回的是token字段
 
-      // 根据角色跳转到不同页面
       if (response.user.role === 'teacher') {
         router.push('/teacher')
       } else {
@@ -76,16 +85,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 初始化时检查本地存储的token
-  const init = () => {
-    const storedToken = localStorage.getItem('authToken')
-    if (storedToken) {
-      token.value = storedToken
-      // 实际应用中应该验证token有效性
-    }
-  }
-
-  init()
+  // 初始化store
+  initialize()
 
   return {
     user,

@@ -1,6 +1,6 @@
 # score.py
 from datetime import datetime
-from ..extensions import db
+from app.extensions import db
 
 class Score(db.Model):
     """评分模型（独立出来便于扩展）

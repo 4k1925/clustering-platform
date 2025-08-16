@@ -1,6 +1,6 @@
 # content.py
 from datetime import datetime
-from ..extensions import db
+from app.extensions import db
 
 class CourseContent(db.Model):
     """课程内容模型（教师发布的课程资料）"""

@@ -1,18 +1,7 @@
 import os
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager
 from .config import Config
-
-# 初始化扩展
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
-jwt = JWTManager()
-cors = CORS()
+from app.extensions import db, migrate, login_manager, jwt, cors
 
 def create_app(config_class=Config):
     """应用工厂函数"""
@@ -21,10 +10,8 @@ def create_app(config_class=Config):
     
     # 初始化扩展
     initialize_extensions(app)
-    
     # 注册蓝图
     register_blueprints(app)
-    
     # 配置CORS
     configure_cors(app)
     
@@ -36,7 +23,6 @@ def initialize_extensions(app):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     jwt.init_app(app)
-    cors.init_app(app)
     
     # 配置登录管理器
     login_manager.login_view = 'auth.login'
@@ -55,13 +41,15 @@ def register_blueprints(app):
     app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
 
 def configure_cors(app):
-    """配置CORS"""
-    cors.init_app(app, resources={
-        r"/api/*": {
-            "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True,
-            "expose_headers": ["Content-Disposition"]
+    cors.init_app(
+        app,
+        resources={
+            r"/*": {
+                "origins": ["http://localhost:5173"],  # 确保与前端端口一致
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": True,
+                "expose_headers": ["Content-Disposition"],
+            }
         }
-    })
+    )

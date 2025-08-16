@@ -1,6 +1,6 @@
 # class_model.py
 from datetime import datetime
-from ..extensions import db
+from app.extensions import db
 
 class Class(db.Model):
     """班级数据模型

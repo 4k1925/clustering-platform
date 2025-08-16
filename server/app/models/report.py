@@ -1,6 +1,6 @@
 # report.py
 from datetime import datetime
-from ..extensions import db
+from app.extensions import db
 
 class Report(db.Model):
     """实验报告模型
