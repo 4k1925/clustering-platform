@@ -1,0 +1,190 @@
+<template>
+  <div class="content-management">
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>课程内容管理</span>
+          <div>
+            <el-select v-model="selectedClass" placeholder="选择班级" @change="loadContents">
+              <el-option
+                v-for="classItem in classes"
+                :key="classItem.class_id"
+                :label="classItem.name"
+                :value="classItem.class_id"
+              />
+            </el-select>
+            <el-button type="primary" @click="showCreateDialog" style="margin-left: 10px;">
+              创建内容
+            </el-button>
+          </div>
+        </div>
+      </template>
+
+      <el-table :data="contents" border style="width: 100%">
+        <el-table-column prop="title" label="标题" />
+        <el-table-column prop="content_type" label="类型">
+          <template #default="scope">
+            <el-tag :type="getContentTypeTag(scope.row.content_type)">
+              {{ scope.row.content_type }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="is_published" label="状态">
+          <template #default="scope">
+            <el-tag :type="scope.row.is_published ? 'success' : 'info'">
+              {{ scope.row.is_published ? '已发布' : '未发布' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="创建时间" />
+        <el-table-column label="操作" width="200">
+          <template #default="scope">
+            <el-button size="small" @click="editContent(scope.row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="deleteContent(scope.row.content_id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 创建/编辑内容对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="70%">
+      <el-form :model="contentForm" label-width="100px">
+        <el-form-item label="标题" required>
+          <el-input v-model="contentForm.title" />
+        </el-form-item>
+        <el-form-item label="内容类型" required>
+          <el-select v-model="contentForm.content_type" placeholder="请选择内容类型">
+            <el-option label="视频" value="video" />
+            <el-option label="文章" value="article" />
+            <el-option label="代码示例" value="code_example" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="视频URL" v-if="contentForm.content_type === 'video'">
+          <el-input v-model="contentForm.video_url" placeholder="输入视频URL" />
+        </el-form-item>
+        <el-form-item label="内容" v-if="contentForm.content_type !== 'video'">
+          <el-input v-model="contentForm.body" type="textarea" :rows="10" />
+        </el-form-item>
+        <el-form-item label="发布状态">
+          <el-switch v-model="contentForm.is_published" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitContentForm">确认</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useTeacherStore } from '@/stores/teacher'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+const teacherStore = useTeacherStore()
+
+const classes = ref([])
+const contents = ref([])
+const selectedClass = ref(null)
+const dialogVisible = ref(false)
+const currentContentId = ref(null)
+const contentForm = ref({
+  title: '',
+  content_type: 'article',
+  body: '',
+  video_url: '',
+  is_published: false,
+  class_id: null
+})
+
+const dialogTitle = computed(() => {
+  return currentContentId.value ? '编辑内容' : '创建内容'
+})
+
+onMounted(async () => {
+  classes.value = await teacherStore.fetchClasses()
+})
+
+const loadContents = async () => {
+  if (selectedClass.value) {
+    contents.value = await teacherStore.fetchContents(selectedClass.value)
+  }
+}
+
+const getContentTypeTag = (type) => {
+  const map = {
+    video: 'danger',
+    article: 'success',
+    code_example: 'warning'
+  }
+  return map[type] || ''
+}
+
+const showCreateDialog = () => {
+  if (!selectedClass.value) {
+    ElMessage.warning('请先选择班级')
+    return
+  }
+  currentContentId.value = null
+  contentForm.value = {
+    title: '',
+    content_type: 'article',
+    body: '',
+    video_url: '',
+    is_published: false,
+    class_id: selectedClass.value
+  }
+  dialogVisible.value = true
+}
+
+const editContent = (content) => {
+  currentContentId.value = content.content_id
+  contentForm.value = { ...content }
+  dialogVisible.value = true
+}
+
+const submitContentForm = async () => {
+  try {
+    if (currentContentId.value) {
+      await teacherStore.updateContent(currentContentId.value, contentForm.value)
+      ElMessage.success('内容更新成功')
+    } else {
+      await teacherStore.createContent(contentForm.value)
+      ElMessage.success('内容创建成功')
+    }
+    dialogVisible.value = false
+    await loadContents()
+  } catch (error) {
+    ElMessage.error(error.message || '操作失败')
+  }
+}
+
+const deleteContent = async (contentId) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个内容吗?', '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await teacherStore.deleteContent(contentId)
+    ElMessage.success('内容删除成功')
+    await loadContents()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
+}
+</script>
+
+<style scoped>
+.content-management {
+  padding: 20px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>

@@ -37,5 +37,31 @@ export const forgotPassword = (email) => {
   return api.post('/auth/forgot-password', { email })
     .then(response => response.data)
 }
+// 获取当前用户信息
+export const getProfile = () => {
+  return api.get('/auth/me')
+    .then(response => response.data)
+}
+
+// 更新用户信息
+export const updateProfile = (profileData) => {
+  return api.put('/auth/profile', profileData)
+    .then(response => response.data)
+}
+
+// 修改密码（区分于重置密码）
+export const changePassword = (passwordData) => {
+  return api.post('/auth/change-password', passwordData)
+    .then(response => response.data)
+}
+
+// 头像上传（可选）
+export const uploadAvatar = (formData) => {
+  return api.post('/auth/upload-avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }).then(response => response.data)
+}
 
 export default api

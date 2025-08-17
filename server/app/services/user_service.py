@@ -46,7 +46,6 @@ class UserService:
         db.session.commit()
         return True
 
-    @staticmethod
     def get_user_by_id(user_id):
         """通过ID获取用户"""
         return User.query.get(user_id)

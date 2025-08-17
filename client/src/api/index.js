@@ -73,33 +73,90 @@ const router = createRouter({
         }
       ]
     },
+    // 教师端路由
     {
       path: '/teacher',
-      name: 'TeacherHome',
-      component: () => import('@/views/teacher/ClassManagement.vue'),
-      meta: { requiresAuth: true, role: 'teacher' }
+      name: 'TeacherLayout',
+      component: () => import('@/views/teacher/TeacherLayout.vue'),
+      meta: { requiresAuth: true, role: 'teacher' },
+      redirect: '/teacher/classes',
+      children: [
+        {
+          path: 'classes',
+          name: 'ClassManagement',
+          component: () => import('@/views/teacher/ClassManagement.vue'),
+          meta: { title: '班级管理' }
+        },
+        {
+          path: 'students',
+          name: 'StudentManagement',
+          component: () => import('@/views/teacher/StudentManagement.vue'),
+          meta: { title: '学生管理' }
+        },
+        {
+          path: 'contents',
+          name: 'ContentManagement',
+          component: () => import('@/views/teacher/ContentManagement.vue'),
+          meta: { title: '内容管理' }
+        },
+        {
+          path: 'reports',
+          name: 'ReportReview',
+          component: () => import('@/views/teacher/ReportReview.vue'),
+          meta: { title: '报告批阅' }
+        },
+        {
+          path: 'scores',
+          name: 'ScoreManagement',
+          component: () => import('@/views/teacher/ScoreManagement.vue'),
+          meta: { title: '成绩管理' }
+        },
+         {
+          path: 'profile',
+          name: 'TeacherProfile',
+          component: () => import('@/views/teacher/ProfileView.vue'),
+          meta: { title: '个人中心' }
+        }
+      ]
     },
-    // 其他路由...
+
+    // 404页面
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('@/views/NotFound.vue'),
+      meta: { requiresAuth: false }
+    }
   ]
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
+  // 如果目标路由需要认证但用户未登录
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // 需要登录但未登录，重定向到登录页
     next('/login')
-  } else if (to.meta.requiresAuth && to.meta.role && authStore.user.role !== to.meta.role) {
-    // 角色不匹配，重定向到对应首页
-    if (authStore.isTeacher) {
-      next('/teacher')
-    } else {
-      next('/student/home') // 修改为跳转到学生端首页
-    }
-  } else {
-    next()
+    return
   }
+
+  // 如果用户已登录但角色不匹配
+  if (to.meta.requiresAuth && to.meta.role && authStore.user?.role !== to.meta.role) {
+    // 根据用户角色重定向到对应首页
+    if (authStore.user?.role === 'teacher') {
+      next('/teacher/classes')
+    } else {
+      next('/student/home')
+    }
+    return
+  }
+
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = `${to.meta.title} - 聚类算法教学平台`
+  }
+
+  next()
 })
 
 export default router

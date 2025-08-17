@@ -2,7 +2,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, register, resetPassword, forgotPassword } from '@/api/auth'
+import { login, register, resetPassword, forgotPassword,
+  getProfile, updateProfile} from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
@@ -20,7 +21,16 @@ export const useAuthStore = defineStore('auth', () => {
       // 这里可以添加验证token有效性的逻辑
     }
   }
-
+  const fetchUser = async () => {
+    try {
+      const response = await getProfile()
+      user.value = response.data // 假设返回格式为 { data: userInfo }
+      return response
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      throw error
+    }
+  }
   const setUser = (userData, authToken) => {
     user.value = userData
     token.value = authToken
@@ -68,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
   const changePassword = async (passwordData) => {
     try {
       await resetPassword(passwordData)
+      await logout()
       return true
     } catch (error) {
       console.error('修改密码失败:', error)
@@ -84,7 +95,17 @@ export const useAuthStore = defineStore('auth', () => {
       throw error
     }
   }
-
+  // 新增：更新个人信息
+  const updateUserProfile = async (profileData) => {
+    try {
+      const response = await updateProfile(profileData)
+      user.value = response.data // 更新store中的用户信息
+      return response
+    } catch (error) {
+      console.error('更新个人信息失败:', error)
+      throw error
+    }
+  }
   // 初始化store
   initialize()
 
@@ -99,6 +120,8 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     changePassword,
     requestPasswordReset,
-    clearUser
+    clearUser,
+    fetchUser,
+    updateUserProfile
   }
 })
