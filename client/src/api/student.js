@@ -1,27 +1,43 @@
-import axios from 'axios'
+import axios from '@/utils/axios'
 
-export const getStudents = (params = {}) => {
-  return axios.get('/api/students', { params })
-}
+export default {
+  // 获取算法介绍内容
+  getAlgorithmContent(algorithm) {
+    return axios.get(`/student/algorithms/${algorithm}`)
+  },
 
-export const createStudent = (studentData) => {
-  return axios.post('/api/students', studentData)
-}
+  // 获取教学视频列表
+  getVideos() {
+    return axios.get('/student/videos')
+  },
 
-export const updateStudent = (id, studentData) => {
-  return axios.put(`/api/students/${id}`, studentData)
-}
+  // 提交代码执行
+  executeCode(codeData) {
+    return axios.post('/student/code/execute', codeData)
+  },
 
-export const deleteStudent = (id) => {
-  return axios.delete(`/api/students/${id}`)
-}
+  // 获取实验报告列表
+  getReports() {
+    return axios.get('/student/reports')
+  },
 
-export const importStudents = (file) => {
-  const formData = new FormData()
-  formData.append('file', file)
-  return axios.post('/api/students/import', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  })
+  // 创建实验报告
+  createReport(reportData) {
+    return axios.post('/student/reports', reportData)
+  },
+
+  // 提交实验报告
+  submitReport(reportId) {
+    return axios.patch(`/student/reports/${reportId}/submit`)
+  },
+
+  // 获取成绩信息
+  getScores() {
+    return axios.get('/student/scores')
+  },
+
+  // 获取算法模拟数据
+  getSimulationData(algorithm, params) {
+    return axios.get(`/student/simulation/${algorithm}`, { params })
+  }
 }

@@ -51,12 +51,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 
 const authStore = useAuthStore()
-const router = useRouter()
+
 
 const form = ref({
   username: '',
@@ -81,7 +80,6 @@ const handleLogin = async () => {
     loading.value = true
     await authStore.loginUser(form.value)
     ElMessage.success('登录成功')
-    router.push('/')
   } catch (error) {
     ElMessage.error(error.response?.data?.error || '登录失败')
   } finally {

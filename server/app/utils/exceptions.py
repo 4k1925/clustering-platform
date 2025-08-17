@@ -1,6 +1,17 @@
-class AuthError(Exception):
-    """认证相关异常"""
-    def __init__(self, message, status_code=400):
-        super().__init__(message)
-        self.status_code = status_code
+class NotFoundException(Exception):
+    """资源未找到异常"""
+    def __init__(self, message="Resource not found"):
         self.message = message
+        super().__init__(self.message)
+
+class UnauthorizedException(Exception):
+    """未授权异常"""
+    def __init__(self, message="Unauthorized"):
+        self.message = message
+        super().__init__(self.message)
+
+class ValidationException(Exception):
+    """验证异常"""
+    def __init__(self, message="Validation error"):
+        self.message = message
+        super().__init__(self.message)

@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.user.role === 'teacher') {
         router.push('/teacher')
       } else {
-        router.push('/student')
+        router.push('/student/home')
       }
       return true
     } catch (error) {

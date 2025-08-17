@@ -26,11 +26,52 @@ const router = createRouter({
       component: () => import('@/views/auth/ForgotPasswordView.vue'),
       meta: { requiresAuth: false }
     },
+ // 学生端路由
     {
       path: '/student',
-      name: 'StudentHome',
-      component: () => import('@/views/student/HomeView.vue'),
-      meta: { requiresAuth: true, role: 'student' }
+      name: 'StudentLayout',
+      component: () => import('@/views/student/StudentLayout.vue'),
+      meta: { requiresAuth: true, role: 'student' },
+      redirect: '/student/home',
+      children: [
+        {
+          path: 'home',
+          name: 'StudentHome',
+          component: () => import('@/views/student/HomeView.vue'),
+          meta: { title: '算法介绍' }
+        },
+        {
+          path: 'videos',
+          name: 'StudentVideos',
+          component: () => import('@/views/student/VideoView.vue'),
+          meta: { title: '教学视频' }
+        },
+        {
+          path: 'code',
+          name: 'StudentCode',
+          component: () => import('@/views/student/CodeDebugView.vue'),
+          meta: { title: '代码调试' }
+        },
+        {
+          path: 'reports',
+          name: 'StudentReports',
+          component: () => import('@/views/student/ReportView.vue'),
+          meta: { title: '实验报告' }
+        },
+        {
+          path: 'scores',
+          name: 'StudentScores',
+          component: () => import('@/views/student/ScoreView.vue'),
+          meta: { title: '我的成绩' }
+        },
+        {
+          path: 'simulation/:algorithm?',
+          name: 'AlgorithmSimulation',
+          component: () => import('@/views/student/SimulationView.vue'),
+          meta: { title: '算法模拟' },
+          props: true
+        }
+      ]
     },
     {
       path: '/teacher',
@@ -54,7 +95,7 @@ router.beforeEach((to, from, next) => {
     if (authStore.isTeacher) {
       next('/teacher')
     } else {
-      next('/student')
+      next('/student/home') // 修改为跳转到学生端首页
     }
   } else {
     next()
