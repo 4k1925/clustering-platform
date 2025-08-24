@@ -1,3 +1,4 @@
+// stores/teacher.js
 import { defineStore } from 'pinia'
 import teacherApi from '../api/teacher'
 
@@ -10,69 +11,168 @@ export const useTeacherStore = defineStore('teacher', {
     reports: [],
     scores: []
   }),
+
   actions: {
     // 班级管理
     async fetchClasses() {
-      const res = await teacherApi.getClasses()
-      this.classes = res.data
-      return res.data
-    },
-    async createClass(data) {
-      const res = await teacherApi.createClass(data)
-      this.classes.push(res.data)
-      return res.data
-    },
-    async updateClass(id, data) {
-      const res = await teacherApi.updateClass(id, data)
-      const index = this.classes.findIndex(c => c.class_id === id)
-      if (index !== -1) {
-        this.classes[index] = res.data
+      try {
+        const res = await teacherApi.getClasses()
+        this.classes = res || []
+        return this.classes
+      } catch (error) {
+        console.error('获取班级列表失败:', error)
+        this.classes = []  // 出错时重置为空数组
+        throw error
       }
-      return res.data
-    },
-    async deleteClass(id) {
-      await teacherApi.deleteClass(id)
-      this.classes = this.classes.filter(c => c.class_id !== id)
     },
 
-    // 学生管理
+    async createClass(data) {
+      try {
+        const res = await teacherApi.createClass(data)
+        const newClass = res
+
+        if (newClass) {
+          this.classes = [...this.classes, newClass]
+        }
+        return newClass
+      } catch (error) {
+        console.error('创建班级失败:', error)
+        throw error
+      }
+    },
+
+    async updateClass(id, data) {
+      try {
+        const res = await teacherApi.updateClass(id, data)
+        const updatedClass = res
+
+        if (updatedClass) {
+          this.classes = this.classes.map(cls =>
+            cls.class_id === id ? updatedClass : cls
+          )
+        }
+        return updatedClass
+      } catch (error) {
+        console.error('更新班级失败:', error)
+        throw error
+      }
+    },
+
+    async deleteClass(id) {
+      try {
+        await teacherApi.deleteClass(id)
+        // 确保 this.classes 是数组
+        this.classes = this.classes.filter(cls => cls.class_id !== id)
+      } catch (error) {
+        console.error('删除班级失败:', error)
+        throw error
+      }
+    },
+
+// 学生管理
     async fetchStudents(classId) {
-      const res = await teacherApi.getStudents(classId)
-      this.students = res.data
-      return res.data
+      try {
+        const students = await teacherApi.getStudents(classId)
+        console.log('获取学生列表数据:', students) // 添加调试信息
+        this.students = Array.isArray(students) ? students : []
+        this.currentClass = classId
+        return this.students
+      } catch (error) {
+        console.error('获取学生列表失败:', error)
+        this.students = [] // 出错时重置为空数组
+        throw error
+      }
     },
+
+// 导入学生
     async importStudents(classId, file) {
-      const res = await teacherApi.importStudents(classId, file)
-      this.students = res.data
-      return res.data
-    },
-    async resetPassword(userId) {
-      await teacherApi.resetPassword(userId)
+      try {
+        const result = await teacherApi.importStudents(classId, file)
+        console.log('导入学生结果:', result) // 添加调试信息
+
+        // 导入成功后重新获取学生列表
+        await this.fetchStudents(classId)
+
+        return result
+      } catch (error) {
+        console.error('导入学生失败:', error)
+        throw error
+      }
     },
 
     // 内容管理
-    async fetchContents(classId) {
-      const res = await teacherApi.getContents(classId)
-      this.contents = res.data
-      return res.data
-    },
-    async createContent(data) {
-      const res = await teacherApi.createContent(data)
-      this.contents.push(res.data)
-      return res.data
-    },
-    async updateContent(id, data) {
-      const res = await teacherApi.updateContent(id, data)
+async fetchContents(classId) {
+  try {
+    const response = await teacherApi.getContents(classId)
+    console.log('获取内容列表响应:', response)
+
+    // 处理不同的响应格式
+    if (Array.isArray(response)) {
+      this.contents = response
+    } else if (response && Array.isArray(response.data)) {
+      this.contents = response.data
+    } else {
+      console.error('获取内容列表: 响应格式不正确', response)
+      this.contents = []
+    }
+    return this.contents
+  } catch (error) {
+    console.error('获取内容列表失败:', error)
+    this.contents = []
+    throw error
+  }
+},
+
+async createContent(data) {
+  try {
+    const response = await teacherApi.createContent(data)
+    console.log('创建内容响应:', response)
+
+    // 处理响应格式
+    const newContent = response.data || response
+
+    // 创建成功后重新获取内容列表，确保数据最新
+    if (data.class_id) {
+      await this.fetchContents(data.class_id)
+    }
+
+    return newContent
+  } catch (error) {
+    console.error('创建内容失败:', error)
+    throw error
+  }
+},
+
+async updateContent(id, data) {
+  try {
+    const response = await teacherApi.updateContent(id, data)
+    console.log('更新内容响应:', response)
+
+    // 处理响应格式
+    const updatedContent = response.data || response
+
+    if (updatedContent) {
       const index = this.contents.findIndex(c => c.content_id === id)
       if (index !== -1) {
-        this.contents[index] = res.data
+        this.contents[index] = updatedContent
       }
-      return res.data
-    },
-    async deleteContent(id) {
-      await teacherApi.deleteContent(id)
-      this.contents = this.contents.filter(c => c.content_id !== id)
-    },
+    }
+    return updatedContent
+  } catch (error) {
+    console.error('更新内容失败:', error)
+    throw error
+  }
+},
+
+async deleteContent(id) {
+  try {
+    await teacherApi.deleteContent(id)
+    this.contents = this.contents.filter(c => c.content_id !== id)
+  } catch (error) {
+    console.error('删除内容失败:', error)
+    throw error
+  }
+},
 
     // 成绩管理
     async fetchScores(classId) {

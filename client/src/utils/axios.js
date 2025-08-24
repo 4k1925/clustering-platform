@@ -1,14 +1,24 @@
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000', // 后端地址
-  withCredentials: true, // 允许携带cookie
-  timeout: 10000 // 超时时间
+  baseURL: 'http://localhost:5000/api', // 注意这里要加上/api前缀
+  withCredentials: true,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
 // 请求拦截器
 api.interceptors.request.use(config => {
-  // 可以在这里添加token等
+  const authStore = useAuthStore()
+  const token = authStore.token || localStorage.getItem('authToken')
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
   return config
 }, error => {
   return Promise.reject(error)
@@ -18,20 +28,31 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(response => {
   return response.data
 }, error => {
+  let authStore
   if (error.response) {
     switch (error.response.status) {
       case 401:
-        // 处理未授权
+        ElMessage.error('登录已过期，请重新登录')
+        authStore = useAuthStore()
+        authStore.logout() // 添加logout处理
+        window.location.href = '/login'
         break
       case 403:
-        // 处理禁止访问
+        ElMessage.error('权限不足')
         break
       case 404:
-        // 处理未找到
+        ElMessage.error('请求的资源不存在')
+        break
+      case 500:
+        ElMessage.error('服务器内部错误')
         break
       default:
-        // 其他错误
+        ElMessage.error(error.response.data?.message || '请求失败')
     }
+  } else if (error.request) {
+    ElMessage.error('网络错误，请检查网络连接')
+  } else {
+    ElMessage.error('请求配置错误')
   }
   return Promise.reject(error)
 })

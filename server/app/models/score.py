@@ -1,13 +1,10 @@
 # score.py
 from datetime import datetime
 from app.extensions import db
+from app.models.dict_to import SerializerMixin
 
-class Score(db.Model):
-    """评分模型（独立出来便于扩展）
-    说明：
-    - 单独存储评分记录便于历史追溯
-    - 一个报告可以有多个评分版本
-    """
+class Score(db.Model, SerializerMixin):
+
     __tablename__ = 'scores'
     
     score_id = db.Column(db.Integer, primary_key=True)

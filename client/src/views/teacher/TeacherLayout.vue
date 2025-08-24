@@ -50,6 +50,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ArrowDown } from '@element-plus/icons-vue'
 import defaultAvatar from '@/assets/images/default-avatar.png'
 import { storeToRefs } from 'pinia'
+import { ElMessage, ElMessageBox } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -92,6 +93,35 @@ const handleMenuSelect = (index) => {
 }
 const handleProfile = () => {
   router.push('/teacher/profile')
+}
+
+const handleLogout = async () => {
+  try {
+    // 添加确认对话框
+    await ElMessageBox.confirm('确定要退出登录吗?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    // 调用authStore的logout方法
+    authStore.logout()
+
+    // 显示成功消息
+    ElMessage.success('退出登录成功')
+
+    // 跳转到登录页
+    router.push('/login')
+
+  } catch (error) {
+    // 用户点击取消
+    if (error === 'cancel') {
+      ElMessage.info('已取消退出')
+    } else {
+      console.error('退出登录失败:', error)
+      ElMessage.error('退出登录失败')
+    }
+  }
 }
 </script>
 

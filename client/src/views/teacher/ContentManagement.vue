@@ -101,14 +101,34 @@ const contentForm = ref({
 const dialogTitle = computed(() => {
   return currentContentId.value ? '编辑内容' : '创建内容'
 })
-
 onMounted(async () => {
-  classes.value = await teacherStore.fetchClasses()
-})
+  try {
+    classes.value = await teacherStore.fetchClasses()
+    console.log('获取到的班级:', classes.value)
 
+    // 确保contents数组已初始化
+    if (!Array.isArray(teacherStore.contents)) {
+      teacherStore.contents = []
+    }
+  } catch (error) {
+    console.error('获取班级失败:', error)
+    ElMessage.error('获取班级列表失败')
+  }
+})
+// const loadContents = async () => {
+//   if (selectedClass.value) {
+//     contents.value = await teacherStore.fetchContents(selectedClass.value)
+//   }
+// }
 const loadContents = async () => {
   if (selectedClass.value) {
-    contents.value = await teacherStore.fetchContents(selectedClass.value)
+    try {
+      contents.value = await teacherStore.fetchContents(selectedClass.value)
+      console.log('获取到的内容:', contents.value)
+    } catch (error) {
+      console.error('获取内容失败:', error)
+      ElMessage.error('获取内容列表失败')
+    }
   }
 }
 
@@ -140,12 +160,18 @@ const showCreateDialog = () => {
 
 const editContent = (content) => {
   currentContentId.value = content.content_id
-  contentForm.value = { ...content }
+  contentForm.value = {
+    ...content,
+    class_id: selectedClass.value // 确保class_id正确
+  }
   dialogVisible.value = true
 }
 
 const submitContentForm = async () => {
   try {
+    // 确保class_id正确设置
+    contentForm.value.class_id = selectedClass.value
+
     if (currentContentId.value) {
       await teacherStore.updateContent(currentContentId.value, contentForm.value)
       ElMessage.success('内容更新成功')
@@ -154,8 +180,12 @@ const submitContentForm = async () => {
       ElMessage.success('内容创建成功')
     }
     dialogVisible.value = false
+
+    // 无论创建还是更新，都重新加载内容列表确保数据一致
     await loadContents()
+
   } catch (error) {
+    console.error('提交内容失败:', error)
     ElMessage.error(error.message || '操作失败')
   }
 }

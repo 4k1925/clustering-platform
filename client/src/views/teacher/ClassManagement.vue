@@ -4,11 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>班级管理</span>
-          <el-button type="primary" @click="showCreateDialog">创建班级</el-button>
+          <el-button type="primary" @click="showCreateDialog">添加班级</el-button>
         </div>
       </template>
 
-      <el-table :data="classes" border style="width: 100%">
+      <el-table :data="classes"  style="width: 100%">
         <el-table-column prop="name" label="班级名称" />
         <el-table-column prop="course_code" label="课程代码" />
         <el-table-column prop="academic_year" label="学年" />
@@ -52,7 +52,9 @@ import { useTeacherStore } from '@/stores/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const teacherStore = useTeacherStore()
-
+if (!teacherStore.classes) {
+  teacherStore.classes = []
+}
 const classes = ref([])
 const dialogVisible = ref(false)
 const currentClassId = ref(null)
@@ -72,7 +74,17 @@ onMounted(async () => {
 })
 
 const loadClasses = async () => {
-  classes.value = await teacherStore.fetchClasses()
+  try {
+    console.log('开始加载班级...')
+    // 直接使用返回值
+    const classList = await teacherStore.fetchClasses()
+    classes.value = classList
+    console.log('班级加载成功:', classes.value)
+  } catch (error) {
+    console.error('加载班级失败:', error)
+    ElMessage.error('加载班级列表失败')
+    classes.value = []
+  }
 }
 
 const showCreateDialog = () => {
@@ -94,17 +106,32 @@ const editClass = (classData) => {
 
 const submitClassForm = async () => {
   try {
-    if (currentClassId.value) {
-      await teacherStore.updateClass(currentClassId.value, classForm.value)
-      ElMessage.success('班级更新成功')
-    } else {
-      await teacherStore.createClass(classForm.value)
-      ElMessage.success('班级创建成功')
+    const classData = {
+      name: classForm.value.name.trim(),
+      course_code: classForm.value.course_code.trim(),
+      academic_year: classForm.value.academic_year?.trim() || '',
+      description: classForm.value.description?.trim() || ''
     }
+
+    if (!classData.name || !classData.course_code) {
+      ElMessage.error('班级名称和课程代码为必填项')
+      return
+    }
+
+    console.log('提交班级数据:', classData)
+
+    // 等待创建完成
+    await teacherStore.createClass(classData)
+    ElMessage.success('班级创建成功')
+
     dialogVisible.value = false
+    // 重新加载确保数据同步
     await loadClasses()
+
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    console.error('创建班级错误:', error)
+    const errorMsg = error.response?.data?.error || error.message || '创建班级失败'
+    ElMessage.error(errorMsg)
   }
 }
 

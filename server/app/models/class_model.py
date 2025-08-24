@@ -1,19 +1,14 @@
 # class_model.py
 from datetime import datetime
 from app.extensions import db
+from app.models.dict_to import SerializerMixin
 
-class Class(db.Model):
-    """班级数据模型
-    说明：
-    - 一个班级包含多个用户(学生/教师)
-    - 通过class_user关联表实现多对多关系
-    - 教师可以管理多个班级
-    """
+class Class(db.Model, SerializerMixin):
     __tablename__ = 'classes'
     
     class_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, comment='班级名称')
-    course_code = db.Column(db.String(50), unique=True)  # 新增课程代码
+    course_code = db.Column(db.String(50), unique=True)  
     academic_year = db.Column(db.String(20))  # 如 "2023-2024"
     description = db.Column(db.Text, comment='班级描述')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

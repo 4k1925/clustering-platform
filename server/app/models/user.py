@@ -3,7 +3,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import db
 from datetime import datetime
-
+from app.models.dict_to import SerializerMixin
 class_user = db.Table(
     'class_user',
     db.Column('user_id', db.Integer, db.ForeignKey('users.user_id'), primary_key=True),
@@ -11,15 +11,8 @@ class_user = db.Table(
     db.Column('join_date', db.DateTime, default=datetime.utcnow)  ,# 记录加入时间
 )
 
-class User(db.Model, UserMixin):
-    """用户数据模型
-    说明：
-    - 使用UserMixin提供Flask-Login需要的基本方法
-    - 密码使用Werkzeug安全哈希存储
-    - 通过role字段实现角色权限控制
-    """
+class User(db.Model, UserMixin,SerializerMixin):
     __tablename__ = 'users'
-    
     user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(200), nullable=False)
@@ -38,6 +31,12 @@ class User(db.Model, UserMixin):
         lazy='dynamic'
     )
     
+    def to_dict(self, exclude=None, include_relationships=False, depth=1):
+        """自定义序列化方法（排除敏感信息）"""
+        exclude = exclude or []
+        exclude.extend(['password_hash'])  # 默认排除密码哈希
+        return super().to_dict(exclude, include_relationships, depth)
+
     # 密码加密处理
     def set_password(self, password):
         """设置密码（自动加密）"""

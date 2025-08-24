@@ -29,7 +29,7 @@ def login():
         return jsonify({'error': '用户名或密码错误'}), 401
     
     access_token = create_access_token(
-        identity=user.user_id,
+        identity=str(user.user_id),
         expires_delta=timedelta(days=7),
         additional_claims={'role': user.role}
     )

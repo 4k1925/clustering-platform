@@ -34,20 +34,30 @@
 
     <!-- 导入学生对话框 -->
     <el-dialog v-model="importDialogVisible" title="导入学生" width="30%">
-      <el-upload
-        class="upload-demo"
-        drag
-        action=""
-        :auto-upload="false"
-        :on-change="handleFileChange"
-        :show-file-list="false"
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">拖拽文件到此处或<em>点击上传</em></div>
-        <template #tip>
-          <div class="el-upload__tip">请上传Excel文件，包含学号、姓名、邮箱等信息</div>
-        </template>
-      </el-upload>
+      <!-- 移除 el-upload 组件，使用原生 input -->
+      <div class="file-upload-area">
+        <input
+          type="file"
+          ref="fileInput"
+          accept=".xlsx,.xls"
+          @change="handleFileChange"
+          style="display: none"
+        >
+        <div
+          class="upload-dropzone"
+          @click="$refs.fileInput.click()"
+          @drop="handleDrop"
+          @dragover.prevent
+          @dragenter.prevent
+        >
+          <el-icon class="upload-icon"><upload-filled /></el-icon>
+          <div class="upload-text">拖拽文件到此处或<em>点击上传</em></div>
+          <div class="upload-tip">请上传Excel文件(.xlsx, .xls, .csv), 包含学号、姓名、邮箱等信息</div>
+          <div v-if="selectedFile" class="selected-file">
+            已选择文件: {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
+          </div>
+        </div>
+      </div>
       <template #footer>
         <el-button @click="importDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="importStudents" :disabled="!selectedFile">导入</el-button>
@@ -63,12 +73,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 
 const teacherStore = useTeacherStore()
-
+const fileInput = ref(null)
 const classes = ref([])
 const students = ref([])
 const selectedClass = ref(null)
 const importDialogVisible = ref(false)
 const selectedFile = ref(null)
+
 
 onMounted(async () => {
   classes.value = await teacherStore.fetchClasses()
@@ -89,18 +100,86 @@ const showImportDialog = () => {
   selectedFile.value = null
 }
 
-const handleFileChange = (file) => {
-  selectedFile.value = file.raw
+const handleFileChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    console.log('选择的文件:', file)
+    console.log('文件名:', file.name)
+    console.log('文件类型:', file.type)
+
+    // 简单的文件扩展名验证
+    const fileName = file.name.toLowerCase()
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
+    const isCSV = fileName.endsWith('.csv')
+
+    if (!isExcel && !isCSV) {
+      ElMessage.error('请上传Excel文件 (.xlsx, .xls) 或 CSV文件 (.csv)')
+      event.target.value = ''
+      selectedFile.value = null
+      return
+    }
+
+    selectedFile.value = file
+    console.log('文件验证通过:', selectedFile.value)
+  }
+}
+
+const handleDrop = (event) => {
+  event.preventDefault()
+  const files = event.dataTransfer.files
+  if (files.length > 0) {
+    handleFileChange({ target: { files: [files[0]] } })
+  }
+}
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const importStudents = async () => {
   try {
+    if (!selectedFile.value) {
+      ElMessage.error('请先选择文件')
+      return
+    }
+
+    console.log('选择的文件对象:', selectedFile.value)
+    console.log('文件类型:', typeof selectedFile.value)
+    console.log('是File实例:', selectedFile.value instanceof File)
+
+    // 确保是有效的 File 对象
+    if (!(selectedFile.value instanceof File)) {
+      ElMessage.error('文件对象无效，请重新选择文件')
+      return
+    }
+
     await teacherStore.importStudents(selectedClass.value, selectedFile.value)
     ElMessage.success('学生导入成功')
     importDialogVisible.value = false
+    selectedFile.value = null
+    // 重置文件输入
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
     await loadStudents()
   } catch (error) {
-    ElMessage.error(error.message || '导入失败')
+    console.error('完整错误:', error)
+
+    if (error.response) {
+      console.error('响应状态:', error.response.status)
+      console.error('响应数据:', error.response.data)
+
+      const errorMsg = error.response.data?.error || error.response.data?.message || '导入失败'
+      ElMessage.error(`导入失败: ${errorMsg}`)
+    } else if (error.request) {
+      console.error('请求对象:', error.request)
+      ElMessage.error('网络错误: 无法连接到服务器')
+    } else {
+      ElMessage.error(`导入失败: ${error.message}`)
+    }
   }
 }
 

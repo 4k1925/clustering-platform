@@ -1,8 +1,8 @@
 # report.py
 from datetime import datetime
 from app.extensions import db
-
-class Report(db.Model):
+from app.models.dict_to import SerializerMixin
+class Report(db.Model, SerializerMixin):
     """实验报告模型
     说明：
     - 学生可以提交多份报告

@@ -6,6 +6,7 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import axios from './utils/axios'
 
+
 const app = createApp(App)
 const pinia = createPinia()
 
@@ -13,6 +14,7 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
+
 
 // 全局挂载axios
 app.config.globalProperties.$axios = axios

@@ -1,8 +1,9 @@
 # content.py
 from datetime import datetime
 from app.extensions import db
+from app.models.dict_to import SerializerMixin
 
-class CourseContent(db.Model):
+class CourseContent(db.Model, SerializerMixin):
     """课程内容模型（教师发布的课程资料）"""
     __tablename__ = 'course_contents'
     

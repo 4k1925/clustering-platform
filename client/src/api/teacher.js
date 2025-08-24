@@ -1,3 +1,4 @@
+// client/src/api/teacher.js
 import axios from '../utils/axios'
 
 export default {
@@ -9,15 +10,30 @@ export default {
 
   // 学生管理
   getStudents: (classId) => axios.get(`/teacher/students?class_id=${classId}`),
-  importStudents: (classId, file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return axios.post(`/teacher/students/import?class_id=${classId}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  },
+importStudents: (classId, file) => {
+  console.log('构建FormData，文件:', file)
+
+  const formData = new FormData()
+  formData.append('file', file)
+  console.log('文件已添加到FormData')
+
+  // 调试 FormData 内容
+  for (let [key, value] of formData.entries()) {
+    console.log(`FormData[${key}]:`, value, value instanceof File ? '(File)' : '(其他)')
+  }
+
+
+  return axios.post(`/teacher/students/import?class_id=${classId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    timeout: 30000,
+    onUploadProgress: (progressEvent) => {
+      const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+      console.log(`上传进度: ${percentCompleted}%`)
+    }
+  })
+},
   resetPassword: (userId) => axios.post(`/teacher/students/${userId}/reset-password`),
 
   // 内容管理
