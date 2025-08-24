@@ -1,4 +1,6 @@
-from flask import Blueprint, request, jsonify
+import os
+import uuid
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, current_user
 from datetime import datetime
 import random
@@ -79,60 +81,174 @@ def execute_code():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# 允许的文件类型
+ALLOWED_EXTENSIONS = {'doc', 'docx', 'pdf', 'wps', 'txt', 'md', 'zip', 'rar'}
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @student_bp.route('/reports', methods=['GET'])
 @jwt_required()
 def get_reports():
-    """获取实验报告列表"""
     try:
-        reports = Report.query.filter_by(
-            user_id=current_user.user_id
-        ).order_by(Report.created_at.desc()).all()
+        reports = Report.query.filter_by(user_id=current_user.user_id).all()
+        print(f"查询到的报告数量: {len(reports)}")
         
-        return jsonify([{
-            'id': r.report_id,
-            'title': r.title,
-            'status': r.status,
-            'created_at': r.created_at.isoformat(),
-            'score': r.score
-        } for r in reports])
+        if not reports:
+            return jsonify([]), 200
+            
+        # 直接使用模型的 to_dict 方法
+        reports_data = []
+        for report in reports:
+            data = report.to_dict(exclude=['file_path'])
+            
+            # 手动添加文件下载URL
+            if report.file_path and os.path.exists(report.file_path):
+                data['file_url'] = f'/api/student/reports/{report.report_id}/download'
+            else:
+                data['file_url'] = None
+                
+            reports_data.append(data)
+        
+        print(f"返回数据: {reports_data}")
+        return jsonify(reports_data), 200
+        
     except Exception as e:
+        print(f"获取报告错误: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @student_bp.route('/reports', methods=['POST'])
 @jwt_required()
 def create_report():
-    """创建实验报告"""
     try:
-        data = request.get_json()
+        # 检查文件
+        if 'file' not in request.files:
+            return jsonify({'error': '请选择文件'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': '请选择文件'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': '不支持的文件类型'}), 400
+        
+        # 检查文件大小
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        if file_size > MAX_FILE_SIZE:
+            return jsonify({'error': '文件大小不能超过50MB'}), 400
+        
+        # 获取标题
+        title = request.form.get('title', '').strip()
+        if not title:
+            title = os.path.splitext(file.filename)[0]
+        
+        # 创建上传目录
+        upload_dir = os.path.join('uploads', 'reports', str(current_user.user_id))
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 生成唯一文件名
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        # 保存文件
+        file.save(file_path)
+        
+        # 创建报告记录
         report = Report(
-            title=data['title'],
-            content=data['content'],
             user_id=current_user.user_id,
+            title=title,
+            content=f"文件报告: {file.filename}",
+            file_name=file.filename,
+            file_path=file_path,
+            file_size=file_size,
+            file_type=file_ext[1:],
             status='draft'
         )
+        
         db.session.add(report)
         db.session.commit()
-        return jsonify({'id': report.report_id}), 201
+        report_data = report.to_dict(exclude=['file_path'])
+        if report.file_path and os.path.exists(report.file_path):
+            report_data['file_url'] = f'/api/student/reports/{report.report_id}/download'
+        else:
+            report_data['file_url'] = None
+        
+        print(f"创建报告成功: {report_data}")
+        return jsonify(report_data), 201
+        
     except Exception as e:
         db.session.rollback()
+        print(f"创建报告错误: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @student_bp.route('/reports/<int:report_id>', methods=['PUT'])
 @jwt_required()
 def update_report(report_id):
-    """更新实验报告"""
     try:
         report = Report.query.filter_by(
-            report_id=report_id,
-            user_id=current_user.user_id,
-            status='draft'
-        ).first_or_404()
+            report_id=report_id, 
+            user_id=current_user.user_id
+        ).first()
         
-        data = request.get_json()
-        report.title = data.get('title', report.title)
-        report.content = data.get('content', report.content)
+        if not report:
+            return jsonify({'error': '报告不存在'}), 404
+        
+        if not report.can_edit():
+            return jsonify({'error': '已提交的报告不能修改'}), 400
+        
+        # 更新标题
+        if 'title' in request.form:
+            report.title = request.form.get('title').strip()
+        
+        # 更新文件（如果有）
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename != '':
+                if not allowed_file(file.filename):
+                    return jsonify({'error': '不支持的文件类型'}), 400
+                
+                # 检查文件大小
+                file.seek(0, os.SEEK_END)
+                file_size = file.tell()
+                file.seek(0)
+                
+                if file_size > MAX_FILE_SIZE:
+                    return jsonify({'error': '文件大小不能超过50MB'}), 400
+                
+                # 删除旧文件
+                if report.file_path and os.path.exists(report.file_path):
+                    os.remove(report.file_path)
+                
+                # 保存新文件
+                file_ext = os.path.splitext(file.filename)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+                file_path = os.path.join('uploads', 'reports', str(current_user.user_id), unique_filename)
+                
+                file.save(file_path)
+                
+                # 更新文件信息
+                report.file_name = file.filename
+                report.file_path = file_path
+                report.file_size = file_size
+                report.file_type = file_ext[1:]
+                report.content = f"文件报告: {file.filename}"
+        
+        report.updated_at = datetime.utcnow()
         db.session.commit()
-        return jsonify({'message': '更新成功'})
+        report_data = report.to_dict(exclude=['file_path'])
+        if report.file_path and os.path.exists(report.file_path):
+            report_data['file_url'] = f'/api/student/reports/{report.report_id}/download'
+        else:
+            report_data['file_url'] = None
+        
+        return jsonify(report_data), 200
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -140,18 +256,75 @@ def update_report(report_id):
 @student_bp.route('/reports/<int:report_id>/submit', methods=['POST'])
 @jwt_required()
 def submit_report(report_id):
-    """提交实验报告"""
     try:
         report = Report.query.filter_by(
-            report_id=report_id,
-            user_id=current_user.user_id,
-            status='draft'
-        ).first_or_404()
+            report_id=report_id, 
+            user_id=current_user.user_id
+        ).first()
         
-        report.status = 'submitted'
-        report.submitted_at = datetime.utcnow()
+        if not report:
+            return jsonify({'error': '报告不存在'}), 404
+        
+        if report.submit():
+            db.session.commit()
+            return jsonify({'message': '报告提交成功'}), 200
+        else:
+            return jsonify({'error': '报告状态不允许提交'}), 400
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@student_bp.route('/reports/<int:report_id>/download', methods=['GET'])
+@jwt_required()
+def download_report(report_id):
+    try:
+        report = Report.query.filter_by(report_id=report_id).first()
+        
+        if not report:
+            return jsonify({'error': '报告不存在'}), 404
+        
+        # 检查权限：要么是报告作者，要么是教师
+        if (report.user_id != current_user.user_id and 
+            current_user.role not in ['teacher', 'admin']):
+            return jsonify({'error': '没有权限'}), 403
+        
+        if not report.file_path or not os.path.exists(report.file_path):
+            return jsonify({'error': '文件不存在'}), 404
+        
+        return send_file(
+            report.file_path,
+            as_attachment=True,
+            download_name=report.file_name or f"report_{report_id}{os.path.splitext(report.file_path)[1]}"
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@student_bp.route('/reports/<int:report_id>', methods=['DELETE'])
+@jwt_required()
+def delete_report(report_id):
+    try:
+        report = Report.query.filter_by(
+            report_id=report_id, 
+            user_id=current_user.user_id
+        ).first()
+        
+        if not report:
+            return jsonify({'error': '报告不存在'}), 404
+        
+        if not report.can_delete():
+            return jsonify({'error': '已提交的报告不能删除'}), 400
+        
+        # 删除文件
+        if report.file_path and os.path.exists(report.file_path):
+            os.remove(report.file_path)
+        
+        db.session.delete(report)
         db.session.commit()
-        return jsonify({'message': '提交成功'})
+        
+        return jsonify({'message': '报告删除成功'}), 200
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

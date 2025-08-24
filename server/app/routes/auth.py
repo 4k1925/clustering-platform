@@ -9,7 +9,6 @@ from datetime import timedelta
 import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
 @auth_bp.route('/login', methods=['POST'])
 @validate_json(['username', 'password'])  # 简化为字段列表验证
 def login():
