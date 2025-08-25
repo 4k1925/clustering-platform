@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 from werkzeug.utils import secure_filename
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.user import User,class_user
@@ -8,6 +8,7 @@ from app.models.score import Score
 from app.models.content import CourseContent
 # from app.services.user_service import get_user_by_id
 from sqlalchemy.exc import SQLAlchemyError  # 添加这行导入
+from app.extensions import db
 from app.services.teacher_service import (
     get_classes_by_teacher,
     create_class,
@@ -22,7 +23,6 @@ from app.services.teacher_service import (
     delete_content,
     get_reports_by_class,
     review_report,
-    get_scores_by_class
 )
 from app.utils.decorators import teacher_required
 from app.utils.helpers import allowed_file
@@ -322,14 +322,134 @@ def submit_review(report_id):
     reviewed_report = review_report(teacher_id, report_id, data)
     return jsonify(reviewed_report.to_dict()), 200
 
-@teacher_bp.route('/scores', methods=['GET'])
+# 后端添加下载接口
+@teacher_bp.route('/reports/<int:report_id>/download', methods=['GET'])
 @jwt_required()
 @teacher_required
-def get_scores():
-    """获取班级成绩列表"""
+def download_report(report_id):
+    """下载报告文件"""
+    try:
+        report = Report.query.get_or_404(report_id)
+        
+        # 检查教师权限（需要实现）
+        # if not has_teacher_access(current_user, report):
+        #     return jsonify({'error': '没有权限访问此报告'}), 403
+        
+        if not report.file_path or not os.path.exists(report.file_path):
+            return jsonify({'error': '文件不存在'}), 404
+        
+        return send_file(
+            report.file_path,
+            as_attachment=True,
+            download_name=report.file_name or f"report_{report_id}.{report.file_type or 'docx'}"
+        )
+        
+    except Exception as e:
+        print(f"下载文件错误: {str(e)}")
+        return jsonify({'error': f'下载失败: {str(e)}'}), 500
+  
+@teacher_bp.route('/scores/statistics', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_score_statistics():
+    """获取班级成绩统计"""
     class_id = request.args.get('class_id')
     if not class_id:
         return jsonify({'error': 'class_id parameter is required'}), 400
     
-    scores = get_scores_by_class(class_id)
-    return jsonify([s.to_dict() for s in scores]), 200
+    try:
+        # 获取班级所有学生
+        students = get_students_in_class(class_id)
+        student_ids = [s.user_id for s in students]
+        
+        # 获取这些学生的所有报告成绩
+        reports = Report.query.filter(
+            Report.user_id.in_(student_ids),
+            Report.status == 'reviewed',
+            Report.score.isnot(None)
+        ).all()
+        
+        # 计算统计信息
+        scores = [r.score for r in reports if r.score is not None]
+        
+        if not scores:
+            return jsonify({
+                'total_students': len(students),
+                'submitted_reports': len(reports),
+                'statistics': {
+                    'score_distribution': {
+                        '90-100': 0, '80-89': 0, '70-79': 0,
+                        '60-69': 0, '0-59': 0
+                    },
+                    'average_score': 0,
+                    'max_score': 0,
+                    'min_score': 0,
+                    'pass_rate': 0
+                }
+            }), 200
+        
+        # 分数段统计
+        score_distribution = {
+            '90-100': len([s for s in scores if 90 <= s <= 100]),
+            '80-89': len([s for s in scores if 80 <= s < 90]),
+            '70-79': len([s for s in scores if 70 <= s < 80]),
+            '60-69': len([s for s in scores if 60 <= s < 70]),
+            '0-59': len([s for s in scores if s < 60])
+        }
+        
+        # 其他统计信息
+        average_score = sum(scores) / len(scores)
+        max_score = max(scores)
+        min_score = min(scores)
+        pass_rate = (len([s for s in scores if s >= 60]) / len(scores)) * 100
+        
+        return jsonify({
+            'total_students': len(students),
+            'submitted_reports': len(reports),
+            'statistics': {
+                'score_distribution': score_distribution,
+                'average_score': round(average_score, 2),
+                'max_score': max_score,
+                'min_score': min_score,
+                'pass_rate': round(pass_rate, 2)
+            }
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"获取成绩统计失败: {str(e)}")
+        return jsonify({'error': f'获取成绩统计失败: {str(e)}'}), 500
+
+@teacher_bp.route('/scores/class/<int:class_id>', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_class_scores(class_id):
+    """获取班级所有学生的成绩"""
+    try:
+        # 获取班级所有学生
+        students = get_students_in_class(class_id)
+        
+        # 获取每个学生的成绩信息
+        student_scores = []
+        for student in students:
+            # 获取学生的最新报告成绩
+            latest_report = Report.query.filter(
+                Report.user_id == student.user_id,
+                Report.status == 'reviewed'
+            ).order_by(Report.submitted_at.desc()).first()
+            
+            student_scores.append({
+                'student_id': student.user_id,
+                'student_name': student.username,
+                'student_number': student.student_id,
+                'score': latest_report.score if latest_report else None,
+                'feedback': latest_report.feedback if latest_report else None,
+                'report_title': latest_report.title if latest_report else None,
+                'submitted_at': latest_report.submitted_at.isoformat() if latest_report and latest_report.submitted_at else None,
+                'status': latest_report.status if latest_report else '未提交'
+            })
+        
+        return jsonify(student_scores), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"获取班级成绩失败: {str(e)}")
+        return jsonify({'error': f'获取班级成绩失败: {str(e)}'}), 500

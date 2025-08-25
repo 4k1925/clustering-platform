@@ -402,9 +402,39 @@ def review_report(teacher_id, report_id, data):
         db.session.rollback()
         raise e
 
-def get_scores_by_class(class_id):
-    """获取班级成绩列表"""
-    return Report.query.join(User).join(class_user).filter(
-        class_user.c.class_id == class_id,
-        Report.status == 'reviewed'
-    ).order_by(Report.score.desc()).all()
+
+def get_class_score_statistics(class_id):
+    """获取班级成绩统计信息"""
+    students = get_students_in_class(class_id)
+    student_ids = [s.user_id for s in students]
+    
+    # 获取这些学生的所有报告成绩
+    reports = Report.query.filter(
+        Report.user_id.in_(student_ids),
+        Report.status == 'reviewed',
+        Report.score.isnot(None)
+    ).all()
+    
+    return students, reports
+
+def get_student_scores_with_reports(class_id):
+    """获取班级学生成绩及报告信息"""
+    students = get_students_in_class(class_id)
+    
+    student_scores = []
+    for student in students:
+        # 获取学生的最新报告成绩
+        latest_report = Report.query.filter(
+            Report.user_id == student.user_id,
+            Report.status == 'reviewed'
+        ).order_by(Report.submitted_at.desc()).first()
+        
+        student_scores.append({
+            'student': student.to_dict(),
+            'report': latest_report.to_dict() if latest_report else None,
+            'score': latest_report.score if latest_report else None
+        })
+    
+    return student_scores
+
+

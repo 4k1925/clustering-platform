@@ -12,5 +12,5 @@ __all__ = [
     'Report',
     'Score',
     'CourseContent',
-    'SerializerMixin'
+    'SerializerMixin' # 序列化
 ]

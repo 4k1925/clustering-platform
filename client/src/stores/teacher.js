@@ -9,7 +9,11 @@ export const useTeacherStore = defineStore('teacher', {
     students: [],
     contents: [],
     reports: [],
-    scores: []
+    scores: [],
+    classesList: [],
+    scoreStatistics: null,
+    classScores: []
+
   }),
 
   actions: {
@@ -174,34 +178,63 @@ async deleteContent(id) {
   }
 },
 
-    // 成绩管理
-    async fetchScores(classId) {
-      const res = await teacherApi.getScores(classId)
-      this.scores = res.data
-      return res.data
-    },
-    async updateScore(reportId, data) {
-      const res = await teacherApi.updateScore(reportId, data)
-      const index = this.scores.findIndex(s => s.report_id === reportId)
-      if (index !== -1) {
-        this.scores[index] = res.data
-      }
-      return res.data
-    },
 
-    // 报告批阅
-    async fetchReports(classId, status = 'submitted') {
-      const res = await teacherApi.getReports(classId, status)
-      this.reports = res.data
-      return res.data
-    },
-    async reviewReport(reportId, data) {
-      const res = await teacherApi.reviewReport(reportId, data)
-      const index = this.reports.findIndex(r => r.report_id === reportId)
-      if (index !== -1) {
-        this.reports[index] = res.data
-      }
-      return res.data
+async fetchReports(classId, status = 'submitted') {
+  try {
+    const res = await teacherApi.getReports(classId, status)
+    console.log('获取报告响应:', res) // 添加调试日志
+
+    // 修改这里：直接使用 res 而不是 res.data
+    this.reports = res || []
+    return this.reports
+  } catch (error) {
+    console.error('获取报告失败:', error)
+    this.reports = []
+    throw error
+  }
+},
+
+async reviewReport(reportId, data) {
+  try {
+    const res = await teacherApi.reviewReport(reportId, data)
+    console.log('批阅报告响应:', res)
+
+    // 修改这里：直接使用 res 而不是 res.data
+    const reviewedReport = res
+
+    const index = this.reports.findIndex(r => r.report_id === reportId)
+    if (index !== -1) {
+      this.reports[index] = reviewedReport
     }
+    return reviewedReport
+  } catch (error) {
+    console.error('批阅报告失败:', error)
+    throw error
+  }
+},
+
+ async fetchScoreStatistics(classId) {
+    try {
+      const res = await teacherApi.getScoreStatistics(classId)
+      this.scoreStatistics = res
+      return this.scoreStatistics
+    } catch (error) {
+      console.error('获取成绩统计失败:', error)
+      this.scoreStatistics = null
+      throw error
+    }
+  },
+
+  async fetchClassScores(classId) {
+    try {
+      const res = await teacherApi.getClassScores(classId)
+      this.classScores = res
+      return this.classScores
+    } catch (error) {
+      console.error('获取班级成绩失败:', error)
+      this.classScores = []
+      throw error
+    }
+  }
   }
 })
