@@ -137,28 +137,127 @@ const goToSimulation = (algorithm) => {
 <style scoped>
 .home-view {
   padding: 20px;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  min-height: 100vh;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.home-view ::v-deep(.el-card) {
+  border-radius: 20px;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.home-view ::v-deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-header h2 {
+  color: #fff;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  text-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+  background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home-view ::v-deep(.el-tabs__nav-wrap::after) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.home-view ::v-deep(.el-tabs__item) {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.home-view ::v-deep(.el-tabs__item:hover) {
+  color: #fff;
+}
+
+.home-view ::v-deep(.el-tabs__item.is-active) {
+  color: #667eea;
+}
+
+.home-view ::v-deep(.el-tabs__active-bar) {
+  background-color: #667eea;
+}
+
+.home-view ::v-deep(.el-tab-pane) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.home-view ::v-deep(.el-tab-pane h3) {
+  color: #fff;
+  font-size: 22px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.home-view ::v-deep(.el-tab-pane p) {
+  line-height: 1.6;
+  margin-bottom: 20px;
 }
 
 .algorithm-details {
-  margin: 20px 0;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+  margin: 25px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .algorithm-details h4 {
-  margin-top: 15px;
-  color: #2c3e50;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #667eea;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.algorithm-details ol,
+.algorithm-details ul {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+  padding-left: 20px;
+}
+
+.algorithm-details li {
+  margin-bottom: 8px;
+}
+
+.algorithm-details strong {
+  color: #9b59b6;
 }
 
 .simulation-link {
-  margin-top: 20px;
+  margin-top: 30px;
   text-align: center;
+}
+
+.home-view ::v-deep(.el-button--primary) {
+  background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
+  border: none;
+  border-radius: 12px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.home-view ::v-deep(.el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 10px 30px rgba(102, 126, 234, 0.4),
+    0 0 20极光 rgba(155, 89, 182, 0.3);
 }
 </style>

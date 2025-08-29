@@ -8,9 +8,9 @@
           mode="horizontal"
           :default-active="activeMenu"
           @select="handleMenuSelect"
-          background-color="#545c64"
-          text-color="#fff"
-          active-text-color="#ffd04b"
+          background-color="transparent"
+          text-color="rgba(255, 255, 255, 0.8)"
+          active-text-color="#667eea"
         >
           <el-menu-item index="class">班级管理</el-menu-item>
           <el-menu-item index="student">学生管理</el-menu-item>
@@ -130,23 +130,51 @@ const handleLogout = async () => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f0f2f5;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.teacher-layout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #545c64;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   color: white;
   padding: 0 20px;
   height: 60px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 1;
 }
 
 .logo {
   font-size: 20px;
   font-weight: bold;
   margin-right: 30px;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .nav {
@@ -167,11 +195,14 @@ const handleLogout = async () => {
 
 .username {
   margin: 0 10px;
+  font-weight: 500;
 }
 
 .main-container {
   flex: 1;
   padding: 20px;
   overflow: auto;
+  position: relative;
+  z-index: 1;
 }
 </style>

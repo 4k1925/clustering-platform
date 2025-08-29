@@ -65,6 +65,12 @@ const router = createRouter({
           meta: { title: '我的成绩' }
         },
         {
+          path: 'contents',
+          name: 'StudentContents',
+          component: () => import('@/views/student/CourseContentView.vue'),
+          meta: { title: '课程资料' }
+        },
+        {
           path: 'simulation/:algorithm?',
           name: 'AlgorithmSimulation',
           component: () => import('@/views/student/SimulationView.vue'),

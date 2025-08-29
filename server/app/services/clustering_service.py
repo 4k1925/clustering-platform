@@ -19,14 +19,6 @@ class ClusteringService:
             'code_template': f'# {algorithm} code template'
         }
     
-    def get_videos_for_student(self, student_id):
-        """获取学生的教学视频"""
-        # 实际项目中应根据学生班级获取相关内容
-        return CourseContent.query.filter_by(
-            content_type='video',
-            is_published=True
-        ).all()
-    
     def execute_student_code(self, student_id, code, algorithm):
         """执行学生代码（安全沙箱实现）"""
         # 实际项目中应使用安全沙箱执行代码

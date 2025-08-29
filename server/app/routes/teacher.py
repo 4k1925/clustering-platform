@@ -276,6 +276,11 @@ def add_content():
     """创建新内容"""
     teacher_id = get_jwt_identity()
     data = request.get_json()
+    
+    # 验证数据
+    if not data.get('class_id'):
+        return jsonify({'error': '班级ID不能为空'}), 400
+    
     new_content = create_content(teacher_id, data)
     return jsonify(new_content.to_dict()), 201
 

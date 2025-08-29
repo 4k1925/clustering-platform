@@ -274,10 +274,11 @@ const viewReportDetails = (report) => {
 }
 
 .chart-container {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.08);
   padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
 }
 
 .stats-cards {
@@ -288,6 +289,9 @@ const viewReportDetails = (report) => {
 
 .stat-card {
   text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
 }
 
 .stat-item {
@@ -296,14 +300,14 @@ const viewReportDetails = (report) => {
 
 .stat-label {
   font-size: 14px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 8px;
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: bold;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .scores-list {
@@ -313,5 +317,149 @@ const viewReportDetails = (report) => {
 .empty-state {
   margin-top: 100px;
   text-align: center;
+}
+
+.score-management ::v-deep(.el-card) {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.score-management ::v-deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.score-management ::v-deep(.el-table) {
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.score-management ::v-deep(.el-table th) {
+  background: #f5f7fa;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+}
+
+.score-management ::v-deep(.el-table td) {
+  background: #fff;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.score-management ::v-deep(.el-table tr:hover td) {
+  background: #f5f7fa;
+}
+
+.score-management ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.score-management ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.score-management ::v-deep(.el-button--primary) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.score-management ::v-deep(.el-button--primary:hover) {
+  background: rgba(102, 126, 234, 0.5);
+  border-color: rgba(102, 126, 234, 0.7);
+}
+
+.score-management ::v-deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.score-management ::v-deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.score-management ::v-deep(.el-dialog__title) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.score-management ::v-deep(.el-dialog__body) {
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.score-management ::v-deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.score-management ::v-deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.score-management ::v-deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.score-management ::v-deep(.el-textarea__inner) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.score-management ::v-deep(.el-tag) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.score-management ::v-deep(.el-tag--success) {
+  background: rgba(103, 194, 58, 0.1);
+  border-color: rgba(103, 194, 58, 0.2);
+  color: rgba(103, 194, 58, 0.8);
+}
+
+.score-management ::v-deep(.el-tag--primary) {
+  background: rgba(64, 158, 255, 0.1);
+  border-color: rgba(64, 158, 255, 0.2);
+  color: rgba(64, 158, 255, 0.8);
+}
+
+.score-management ::v-deep(.el-tag--warning) {
+  background: rgba(230, 162, 60, 0.1);
+  border-color: rgba(230, 162, 60, 0.2);
+  color: rgba(230, 162, 60, 0.8);
+}
+
+.score-management ::v-deep(.el-tag--danger) {
+  background: rgba(245, 108, 108, 0.1);
+  border-color: rgba(245, 108, 108, 0.2);
+  color: rgba(245, 108, 108, 0.8);
+}
+
+.score-management ::v-deep(.el-tag--info) {
+  background: rgba(144, 147, 153, 0.1);
+  border-color: rgba(144, 147, 153, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.score-management ::v-deep(.el-empty__description) {
+  color: rgba(255, 255, 255, 0.7);
 }
 </style>

@@ -437,4 +437,58 @@ def get_student_scores_with_reports(class_id):
     
     return student_scores
 
-
+def get_student_contents(student_id, content_type=None):
+    """获取学生所在班级的课程内容"""
+    try:
+        # 获取学生所在的班级
+        student = User.query.get(student_id)
+        if not student:
+            return {
+                'success': False, 
+                'error': '学生不存在',
+                'contents': []
+            }
+        
+        class_ids = [cls.class_id for cls in student.classes]
+        
+        # 如果没有班级，返回空数组
+        if not class_ids:
+            return {
+                'success': True, 
+                'contents': []
+            }
+        
+        # 查询课程内容
+        query = CourseContent.query.filter(
+            CourseContent.class_id.in_(class_ids),
+            CourseContent.is_published == True
+        )
+        
+        if content_type:
+            query = query.filter_by(content_type=content_type)
+        
+        contents = query.order_by(CourseContent.created_at.desc()).all()
+        
+        # 序列化结果
+        serialized_contents = []
+        for content in contents:
+            content_dict = content.to_dict()
+            # 确保所有字段都有值
+            content_dict.setdefault('video_url', '')
+            content_dict.setdefault('body', '')
+            content_dict.setdefault('attachments', [])
+            serialized_contents.append(content_dict)
+        
+        return {
+            'success': True, 
+            'contents': serialized_contents
+        }
+    except Exception as e:
+        # 记录错误日志
+        import traceback
+        current_app.logger.error(f"获取学生内容失败: {str(e)}\n{traceback.format_exc()}")
+        return {
+            'success': False, 
+            'error': str(e),
+            'contents': []
+        }
