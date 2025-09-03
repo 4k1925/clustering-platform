@@ -13,25 +13,69 @@
       <div class="simulation-container">
         <div class="controls">
           <el-form label-width="120px">
+            <!-- 数据类型选择 -->
+            <el-form-item label="数据类型">
+              <el-select v-model="dataType" placeholder="选择数据类型">
+                <el-option
+                  v-for="type in dataTypes"
+                  :key="type.value"
+                  :label="type.label"
+                  :value="type.value"
+                  :title="type.description"
+                />
+              </el-select>
+            </el-form-item>
+
             <el-form-item label="数据点数量">
-              <el-slider v-model="pointCount" :min="10" :max="500" />
+              <el-slider v-model="pointCount" :min="10" :max="500" show-input />
             </el-form-item>
 
-            <el-form-item v-if="algorithm === 'kmeans'" label="簇数量 (K)">
-              <el-slider v-model="kValue" :min="2" :max="10" />
-            </el-form-item>
+            <!-- K-Means 特定参数 -->
+            <template v-if="algorithm === 'kmeans'">
+              <el-form-item label="簇数量 (K)">
+                <el-slider v-model="kValue" :min="2" :max="10" show-input />
+              </el-form-item>
+              <el-form-item label="质心选择方法">
+                <el-select v-model="centroidMethod" placeholder="选择质心方法">
+                  <el-option
+                    v-for="method in centroidMethods"
+                    :key="method.value"
+                    :label="method.label"
+                    :value="method.value"
+                    :title="method.description"
+                  />
+                </el-select>
+              </el-form-item>
+            </template>
 
-            <el-form-item v-if="algorithm === 'dbscan'" label="邻域半径 (ε)">
-              <el-slider v-model="epsilon" :min="0.1" :max="2" :step="0.1" />
-            </el-form-item>
+            <!-- DBSCAN 特定参数 -->
+            <template v-if="algorithm === 'dbscan'">
+              <el-form-item label="邻域半径 (ε)">
+                <el-slider v-model="epsilon" :min="0.1" :max="2" :step="0.1" show-input />
+              </el-form-item>
+              <el-form-item label="最小点数">
+                <el-slider v-model="minPoints" :min="1" :max="10" show-input />
+              </el-form-item>
+            </template>
 
-            <el-form-item v-if="algorithm === 'dbscan'" label="最小点数">
-              <el-slider v-model="minPoints" :min="1" :max="10" />
-            </el-form-item>
+            <!-- 层次聚类特定参数 -->
+            <template v-if="algorithm === 'hierarchical'">
+              <el-form-item label="簇数量">
+                <el-slider v-model="nClusters" :min="2" :max="10" show-input />
+              </el-form-item>
+              <el-form-item label="连接方法">
+                <el-select v-model="linkageMethod" placeholder="选择连接方法">
+                  <el-option label="Ward" value="ward" />
+                  <el-option label="Complete" value="complete" />
+                  <el-option label="Average" value="average" />
+                  <el-option label="Single" value="single" />
+                </el-select>
+              </el-form-item>
+            </template>
 
             <el-form-item>
-              <el-button type="primary" @click="generateData">
-                生成数据
+              <el-button type="primary" @click="startSimulation" :loading="isLoading">
+                开始模拟
               </el-button>
               <el-button @click="resetSimulation">
                 重置
@@ -39,7 +83,8 @@
             </el-form-item>
           </el-form>
 
-          <div class="animation-controls" v-if="dataGenerated">
+          <!-- 动画控制 -->
+          <div class="animation-controls" v-if="simulationData">
             <el-button @click="stepBackward" :disabled="!canStepBack">
               <el-icon><ArrowLeft /></el-icon>
             </el-button>
@@ -49,12 +94,26 @@
             <el-button @click="stepForward" :disabled="!canStepForward">
               <el-icon><ArrowRight /></el-icon>
             </el-button>
-            <span>步骤: {{ currentStep + 1 }}/{{ simulationSteps.length }}</span>
+            <span>步骤: {{ currentStep + 1 }}/{{ simulationData.steps?.length || 0 }}</span>
           </div>
+
+          <!-- 错误显示 -->
+          <el-alert
+            v-if="error"
+            :title="error"
+            type="error"
+            show-icon
+            closable
+            @close="error = null"
+            style="margin-top: 20px"
+          />
         </div>
 
         <div class="visualization">
           <div ref="canvasContainer" class="canvas-container"></div>
+          <div v-if="simulationData" class="step-description">
+            {{ currentStepDescription }}
+          </div>
         </div>
       </div>
     </el-card>
@@ -62,27 +121,39 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useClusteringStore } from '@/stores/clustering'
 import * as d3 from 'd3'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
-const algorithm = ref(route.params.algorithm || 'kmeans')
+const clusteringStore = useClusteringStore()
 const canvasContainer = ref(null)
 
-// 模拟参数
+// 算法参数
+const algorithm = ref(route.params.algorithm || 'kmeans')
+const dataType = ref('uniform')
 const pointCount = ref(100)
 const kValue = ref(3)
+const centroidMethod = ref('random')
 const epsilon = ref(0.5)
-const minPoints = ref(3)
+const minPoints = ref(5)
+const nClusters = ref(3)
+const linkageMethod = ref('ward')
+
+// 模拟状态
 const isAnimating = ref(false)
 const animationInterval = ref(null)
-const currentStep = ref(0)
-const simulationSteps = ref([])
-const dataGenerated = ref(false)
-const svg = ref(null)
+const isLoading = ref(false)
+const error = ref(null)
+
+// 从store获取数据
+const simulationData = computed(() => clusteringStore.simulationData)
+const currentStep = computed(() => clusteringStore.currentStep)
+const dataTypes = computed(() => clusteringStore.dataTypes)
+const centroidMethods = computed(() => clusteringStore.centroidMethods)
 
 // 计算属性
 const algorithmName = computed(() => {
@@ -95,139 +166,54 @@ const algorithmName = computed(() => {
 })
 
 const canStepBack = computed(() => currentStep.value > 0)
-const canStepForward = computed(() => currentStep.value < simulationSteps.value.length - 1)
+const canStepForward = computed(() => {
+  const steps = simulationData.value?.steps || []
+  return currentStep.value < steps.length - 1
+})
+
+const currentStepDescription = computed(() => {
+  const steps = simulationData.value?.steps || []
+  return steps[currentStep.value]?.description || ''
+})
 
 // 方法
-const generateData = () => {
-  // 生成随机数据点
-  const data = Array.from({ length: pointCount.value }, () => ({
-    x: Math.random() * 500,
-    y: Math.random() * 500,
-    cluster: null
-  }))
+const startSimulation = async () => {
+  try {
+    isLoading.value = true
+    error.value = null
 
-  // 根据算法初始化模拟步骤
-  if (algorithm.value === 'kmeans') {
-    initializeKMeans(data)
-  } else if (algorithm.value === 'dbscan') {
-    initializeDBSCAN(data)
-  } else {
-    initializeHierarchical(data)
-  }
-
-  dataGenerated.value = true
-  currentStep.value = 0
-  renderSimulation()
-}
-
-const initializeKMeans = (data) => {
-  // 1. 随机选择初始质心
-  const centroids = []
-  for (let i = 0; i < kValue.value; i++) {
-    centroids.push({
-      x: Math.random() * 500,
-      y: Math.random() * 500,
-      cluster: i
-    })
-  }
-
-  simulationSteps.value = [{
-    description: '随机选择初始质心',
-    data: [...data],
-    centroids: [...centroids]
-  }]
-
-  // 模拟K-Means步骤
-  let changed = true
-  let iteration = 0
-  let currentCentroids = [...centroids]
-
-  while (changed && iteration < 10) {
-    changed = false
-
-    // 分配步骤
-    const newData = data.map(point => {
-      let minDist = Infinity
-      let cluster = -1
-
-      currentCentroids.forEach((centroid, idx) => {
-        const dist = Math.sqrt(
-          Math.pow(point.x - centroid.x, 2) +
-          Math.pow(point.y - centroid.y, 2)
-        )
-
-        if (dist < minDist) {
-          minDist = dist
-          cluster = idx
-        }
-      })
-
-      return { ...point, cluster }
-    })
-
-    // 计算新质心
-    const newCentroids = []
-    for (let i = 0; i < kValue.value; i++) {
-      const clusterPoints = newData.filter(p => p.cluster === i)
-      if (clusterPoints.length > 0) {
-        const sumX = clusterPoints.reduce((sum, p) => sum + p.x, 0)
-        const sumY = clusterPoints.reduce((sum, p) => sum + p.y, 0)
-        newCentroids.push({
-          x: sumX / clusterPoints.length,
-          y: sumY / clusterPoints.length,
-          cluster: i
-        })
-      } else {
-        // 如果某个簇没有点，保留原来的质心
-        newCentroids.push(currentCentroids[i])
-      }
+    const params = {
+      data_type: dataType.value,
+      point_count: pointCount.value
     }
 
-    // 检查质心是否变化
-    for (let i = 0; i < kValue.value; i++) {
-      const dx = newCentroids[i].x - currentCentroids[i].x
-      const dy = newCentroids[i].y - currentCentroids[i].y
-      if (Math.sqrt(dx * dx + dy * dy) > 0.1) {
-        changed = true
-        break
-      }
+    if (algorithm.value === 'kmeans') {
+      params.k_value = kValue.value
+      params.centroid_method = centroidMethod.value
+    } else if (algorithm.value === 'dbscan') {
+      params.epsilon = epsilon.value
+      params.min_points = minPoints.value
+    } else if (algorithm.value === 'hierarchical') {
+      params.n_clusters = nClusters.value
+      params.linkage = linkageMethod.value
     }
 
-    // 保存当前步骤
-    simulationSteps.value.push({
-      description: `迭代 ${iteration + 1}: 分配点并更新质心`,
-      data: [...newData],
-      centroids: [...newCentroids]
-    })
-
-    currentCentroids = newCentroids
-    iteration++
+    await clusteringStore.simulateAlgorithm(algorithm.value, params)
+    renderSimulation()
+  } catch (err) {
+    error.value = err.message || '模拟失败'
+  } finally {
+    isLoading.value = false
   }
-}
-
-const initializeDBSCAN = (data) => {
-  // 简化的DBSCAN模拟
-  simulationSteps.value = [
-    { description: '初始数据点', data: [...data] },
-    { description: '识别核心点', data: [...data] },
-    { description: '形成簇', data: [...data] },
-    { description: '标记噪声点', data: [...data] }
-  ]
-}
-
-const initializeHierarchical = (data) => {
-  // 简化的层次聚类模拟
-  simulationSteps.value = [
-    { description: '初始数据点', data: [...data] },
-    { description: '计算距离矩阵', data: [...data] },
-    { description: '合并最近簇', data: [...data] },
-    { description: '更新距离矩阵', data: [...data] },
-    { description: '形成层次结构', data: [...data] }
-  ]
 }
 
 const renderSimulation = () => {
-  if (!dataGenerated.value || !canvasContainer.value) return
+  if (!simulationData.value || !canvasContainer.value) return
+
+  const steps = simulationData.value.steps || []
+  if (steps.length === 0) return
+
+  const currentStepData = steps[currentStep.value]
 
   // 清除现有SVG
   d3.select(canvasContainer.value).selectAll('*').remove()
@@ -235,28 +221,25 @@ const renderSimulation = () => {
   // 创建SVG画布
   const width = canvasContainer.value.clientWidth
   const height = 500
-  svg.value = d3.select(canvasContainer.value)
+  const svg = d3.select(canvasContainer.value)
     .append('svg')
     .attr('width', width)
     .attr('height', height)
 
-  // 获取当前步骤的数据
-  const stepData = simulationSteps.value[currentStep.value]
-
   // 渲染数据点
-  svg.value.selectAll('circle')
-    .data(stepData.data)
+  svg.selectAll('circle')
+    .data(currentStepData.points || [])
     .enter()
     .append('circle')
     .attr('cx', d => d.x)
     .attr('cy', d => d.y)
     .attr('r', 5)
-    .attr('fill', d => d.cluster !== null ? getClusterColor(d.cluster) : '#3498db')
+    .attr('fill', d => getClusterColor(d.cluster))
 
-  // 如果当前步骤有质心，渲染质心
-  if (stepData.centroids) {
-    svg.value.selectAll('rect.centroid')
-      .data(stepData.centroids)
+  // 渲染质心（如果有）
+  if (currentStepData.centroids) {
+    svg.selectAll('rect.centroid')
+      .data(currentStepData.centroids)
       .enter()
       .append('rect')
       .attr('x', d => d.x - 8)
@@ -264,31 +247,37 @@ const renderSimulation = () => {
       .attr('width', 16)
       .attr('height', 16)
       .attr('fill', d => getClusterColor(d.cluster))
+      .attr('stroke', '#000')
+      .attr('stroke-width', 2)
   }
 
   // 显示当前步骤描述
-  svg.value.append('text')
+  svg.append('text')
     .attr('x', 10)
     .attr('y', 20)
     .attr('fill', '#333')
-    .text(stepData.description)
+    .attr('font-size', '14px')
+    .attr('font-weight', 'bold')
+    .text(currentStepData.description)
 }
 
 const getClusterColor = (clusterIdx) => {
-  const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
-  return colors[clusterIdx % colors.length]
+  const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#27ae60']
+  return clusterIdx !== null && clusterIdx !== undefined && clusterIdx >= 0 
+    ? colors[clusterIdx % colors.length] 
+    : '#95a5a6' // 灰色表示未分类点
 }
 
 const stepForward = () => {
   if (canStepForward.value) {
-    currentStep.value++
+    clusteringStore.currentStep++
     renderSimulation()
   }
 }
 
 const stepBackward = () => {
   if (canStepBack.value) {
-    currentStep.value--
+    clusteringStore.currentStep--
     renderSimulation()
   }
 }
@@ -300,8 +289,7 @@ const toggleAnimation = () => {
   } else {
     animationInterval.value = setInterval(() => {
       if (canStepForward.value) {
-        currentStep.value++
-        renderSimulation()
+        stepForward()
       } else {
         clearInterval(animationInterval.value)
         isAnimating.value = false
@@ -314,9 +302,7 @@ const toggleAnimation = () => {
 const resetSimulation = () => {
   clearInterval(animationInterval.value)
   isAnimating.value = false
-  dataGenerated.value = false
-  currentStep.value = 0
-  simulationSteps.value = []
+  clusteringStore.reset()
   d3.select(canvasContainer.value).selectAll('*').remove()
 }
 
@@ -324,9 +310,10 @@ const goBack = () => {
   router.push({ name: 'StudentHome' })
 }
 
-onMounted(() => {
-  // 初始生成数据
-  generateData()
+// 初始化
+onMounted(async () => {
+  await clusteringStore.fetchDataTypes()
+  await clusteringStore.fetchCentroidMethods()
 
   // 监听窗口大小变化
   window.addEventListener('resize', renderSimulation)
@@ -335,7 +322,11 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', renderSimulation)
   clearInterval(animationInterval.value)
+  clusteringStore.reset()
 })
+
+// 监听当前步骤变化
+watch(currentStep, renderSimulation)
 </script>
 
 <style scoped>
@@ -351,15 +342,19 @@ onUnmounted(() => {
 
 .simulation-container {
   display: flex;
+  gap: 20px;
 }
 
 .controls {
-  width: 300px;
-  padding-right: 20px;
+  width: 350px;
+  min-width: 350px;
 }
 
 .visualization {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .canvas-container {
@@ -367,6 +362,15 @@ onUnmounted(() => {
   height: 500px;
   border: 1px solid #eee;
   border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.step-description {
+  padding: 10px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #606266;
 }
 
 .animation-controls {
@@ -374,5 +378,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 10px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+
+.animation-controls span {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #606266;
 }
 </style>

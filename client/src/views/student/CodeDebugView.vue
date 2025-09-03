@@ -190,38 +190,152 @@ loadTemplate()
   padding: 20px;
 }
 
+.code-debug-view ::v-deep(.el-card) {
+  border-radius: 20px;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.code-debug-view ::v-deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+}
+
+.card-header h2 {
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-cl极光: text;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.code-debug-view ::v-deep(.el-select) {
+  width: 200px;
+}
+
+.code-debug-view ::v-deep(.el-select .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.code-de极光-view ::v-deep(.el-select .el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.code-debug-view ::v-deep(.el-select .el-input__suffix) {
+  color: rgba(255, 255, 255, 极光.7);
+}
+
+.code-debug-view ::v-deep(.el-select-dropdown) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.code-debug-view ::v-deep(.el-select-dropdown__item) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.code-debug-view ::v-deep(.el-select-dropdown__item:hover) {
+  background: rgba(102, 126, 234, 0.2);
+  color: #fff;
+}
+
+.code-debug-view ::v-deep(.el-select-dropdown__item.selected) {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
 }
 
 .editor-container {
-  margin-bottom: 20px;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .editor {
   height: 400px;
 }
 
+.code-debug-view ::v-deep(.monaco-editor) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.code-debug-view ::v-deep(.monaco-editor .margin) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .action-buttons {
-  padding: 10px;
-  background: #f5f7fa;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
   text-align: right;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.code-debug-view ::v-deep(.el-button--primary) {
+  background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
+  border: none;
+  border-radius: 12px;
+  height: 40px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.code-debug-view ::v-deep(.el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.code-debug-view ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  height: 40px;
+  transition: all 0.3s ease;
+}
+
+.code-debug-view ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 .output-container {
-  margin-top: 20px;
+  margin-top: 25px;
+}
+
+.output-container h3 {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .output-content {
-  padding: 15px;
-  background: #f9f9f9;
-  border-radius: 4px;
-  min-height: 100px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 120px;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -229,5 +343,18 @@ loadTemplate()
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.empty-state ::v-deep(.el-empty__description) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-state ::v-deep(.el-empty__image) {
+  opacity: 0.5;
 }
 </style>

@@ -125,26 +125,122 @@ const changePassword = async () => {
 .profile-view {
   padding: 20px;
 }
+
 .profile-card {
   max-width: 800px;
   margin: 0 auto;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
+
+.profile-card ::v-deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.profile-content {
+  padding: 20px;
+}
+
+.profile-view ::v-deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.profile-view ::v-deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.profile-view ::v-deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.profile-view ::v-deep(.el-input.is-disabled .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-view ::v-deep(.el-input.is-disabled .el-input__inner) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.profile-view ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.profile-view ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.profile-view ::v-deep(.el-button--primary) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.profile-view ::v-deep(.el-button--primary:hover) {
+  background: rgba(102, 126, 234, 0.5);
+  border-color: rgba(102, 126, 234, 0.7);
+}
+
+.profile-view ::v-deep(.el-divider) {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .avatar-uploader {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
   border-radius: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   width: 100px;
   height: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
 }
+
 .avatar-uploader:hover {
-  border-color: #409eff;
+  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(255, 255, 255, 0.1);
 }
+
 .avatar {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+.profile-view ::v-deep(.el-upload) {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-view ::v-deep(.el-icon) {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 28px;
+}
+
+.profile-view ::v-deep(.el-upload:hover .el-icon) {
+  color: rgba(102, 126, 234, 0.8);
+}
+
+.profile-view h3 {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 20px;
+  font-weight: 600;
 }
 </style>

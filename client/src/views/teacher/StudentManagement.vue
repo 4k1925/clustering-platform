@@ -204,9 +204,167 @@ const resetPassword = async (userId) => {
 .student-management {
   padding: 20px;
 }
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.student-management ::v-deep(.el-card) {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 极光.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.student-management ::v-deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.student-management ::v-deep(.el-table) {
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.student-management ::v-deep(.el-table th) {
+  background: #f5f7fa;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+}
+
+.student-management ::v-deep(.el-table td) {
+  background: #fff;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.student-management ::v-deep(.el-table tr:hover td) {
+  background: #f5f7fa;
+}
+
+.student-management ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.student-management ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.student-management ::v-deep(.el-button--primary) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.student-management ::v-deep(.el-button--primary:hover) {
+  background: rgba(102, 126, 234, 0.5);
+  border-color: rgba(102极光 126, 234, 0.7);
+}
+
+.student-management ::v-deep(.el-button--danger) {
+  background: rgba(245, 108, 108, 0.2);
+  border-color: rgba(245, 108, 108, 0.3);
+  color: #f56c6c;
+}
+
+.student-management ::v-deep(.el-button--danger:hover) {
+  background: rgba(245, 108, 108, 0.3);
+  color: #fff;
+}
+
+.student-management ::v-deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.student-management ::v-deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 极光px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.student-management ::v-deep(.el极光dialog__title) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.student-management ::v-deep(.el-dialog__body) {
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.student-management ::v-deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.student-management ::v-deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.student-management ::v-deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.file-upload-area {
+  text-align: center;
+}
+
+.upload-dropzone {
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 16px;
+}
+
+.upload-text {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.upload-text em {
+  color: #667eea;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.upload-tip {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.selected-file {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-top: 16px;
 }
 </style>

@@ -61,9 +61,18 @@
         </el-form-item>
         <el-form-item label="视频URL" v-if="contentForm.content_type === 'video'">
           <el-input v-model="contentForm.video_url" placeholder="输入视频URL" />
+          <div style="font-size: 12px; color: #666; margin-top: 5px;">
+            支持格式：YouTube、Bilibili、腾讯视频等外链
+          </div>
         </el-form-item>
         <el-form-item label="内容" v-if="contentForm.content_type !== 'video'">
-          <el-input v-model="contentForm.body" type="textarea" :rows="10" />
+          <el-input v-model="contentForm.body" type="textarea" :rows="10" placeholder="请输入详细内容..." />
+        </el-form-item>
+        <el-form-item label="附件" v-if="contentForm.content_type !== 'video'">
+          <el-input v-model="contentForm.attachments" placeholder="附件信息（可选）" />
+          <div style="font-size: 12px; color: #666; margin-top: 5px;">
+            格式：文件名1|下载链接1,文件名2|下载链接2
+          </div>
         </el-form-item>
         <el-form-item label="发布状态">
           <el-switch v-model="contentForm.is_published" />
@@ -212,9 +221,133 @@ const deleteContent = async (contentId) => {
 .content-management {
   padding: 20px;
 }
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.content-management ::v-deep(.el-card) {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.content-management ::v-deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.content-management ::v-deep(.el-table) {
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.content-management ::v-deep(.el-table th) {
+  background: #f5f7fa;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+}
+
+.content-management ::v-deep(.el-table td) {
+  background: #fff;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.content-management ::v-deep(.el-table tr:hover td) {
+  background: #f5f7fa;
+}
+
+.content-management ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.content-management ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.content-management ::v-deep(.el-button--primary) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.content-management ::v-deep(.el-button--primary:hover) {
+  background: rgba(102, 126, 234, 0.5);
+  border-color: rgba(102, 126, 234, 0.7);
+}
+
+.content-management ::v-deep(.el-button--danger) {
+  background: rgba(245, 108, 108, 0.2);
+  border-color: rgba(245, 108, 极光, 0.3);
+  color: #f56c6c;
+}
+
+.content-management ::v-deep(.el-button--danger:hover) {
+  background: rgba(245, 108, 108, 0.3);
+  color: #fff;
+}
+
+.content-management ::v-deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.content-management ::v-deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.content-management ::v-deep(.el-dialog__title) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.content-management ::v-deep(.el-dialog__body) {
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.content-management ::v-deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.content-management ::v-deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.content-management ::v-deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.content-management ::v-deep(.el-select) {
+  width: 100%;
+}
+
+.content-management ::v-deep(.el-textarea__inner) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.content-management ::v-deep(.el-switch) {
+  --el-switch-on-color: #667eea;
 }
 </style>

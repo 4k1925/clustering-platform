@@ -157,9 +157,121 @@ const deleteClass = async (classId) => {
 .class-management {
   padding: 20px;
 }
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.class-management ::v-deep(.el-card) {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.class-management ::v-deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.class-management ::v-deep(.el-table) {
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.class-management ::v-deep(.el-table th) {
+  background: #f5f7fa;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+}
+
+.class-management ::v-deep(.el-table td) {
+  background: #fff;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.class-management ::v-deep(.el-table tr:hover td) {
+  background: #f5f7fa;
+}
+
+.class-management ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.class-management ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.class-management ::v-deep(.el-button--primary) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.class-management ::v-deep(.el-button--primary:hover) {
+  background: rgba(102, 126, 234, 0.5);
+  border-color: rgba(102, 126, 234, 0.7);
+}
+
+.class-management ::v-deep(.el-button--danger) {
+  background: rgba(245, 108, 108, 0.2);
+  border-color: rgba(245, 108, 108, 0.3);
+  color: #f56c6c;
+}
+
+.class-management ::v-deep(.el-button--danger:hover) {
+  background: rgba(245, 108, 108, 0.3);
+  color: #fff;
+}
+
+.class-management ::v-deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.class-management ::v-deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.class-management ::v-deep(.el-dialog__title) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.class-management ::v-deep(.el-dialog__body) {
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.class-management ::v-deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.class-management ::v-deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.class-management ::v-deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }
 </style>

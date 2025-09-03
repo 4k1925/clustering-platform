@@ -321,8 +321,9 @@ const submitReview = async () => {
   gap: 12px;
   margin: 20px 0;
   padding: 15px;
-  background-color: #f8f9fa;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .meta-item {
@@ -332,7 +333,7 @@ const submitReview = async () => {
 }
 
 .meta-item strong {
-  color: #606266;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 12px;
 }
 
@@ -342,9 +343,9 @@ const submitReview = async () => {
   gap: 15px;
   margin: 20px 0;
   padding: 15px;
-  background-color: #f0f9ff;
+  background: rgba(102, 126, 234, 0.1);
   border-radius: 8px;
-  border-left: 4px solid #409eff;
+  border-left: 4px solid rgba(102, 126, 234, 0.5);
 }
 
 .preview-info {
@@ -354,28 +355,157 @@ const submitReview = async () => {
 .content-preview {
   margin: 20px 0;
   padding: 15px;
-  background-color: #f5f7fa;
+  background: rgba(103, 194, 58, 0.1);
   border-radius: 8px;
-  border-left: 4px solid #67c23a;
+  border-left: 4px solid rgba(103, 194, 58, 0.5);
 }
 
 .content-text {
   white-space: pre-wrap;
   line-height: 1.6;
-  color: #606266;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .file-name {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #409eff;
+  color: rgba(102, 126, 234, 0.8);
 }
 
-:deep(.el-table .cell) {
-  line-height: 1.4;
+.report-review ::v-deep(.el-card) {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
-:deep(.el-table__row:hover) {
-  background-color: #f5f7fa;
+.report-review ::v-deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.report-review ::v-deep(.el-table) {
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.report-review ::v-deep(.el-table th) {
+  background: #f5f7fa;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+}
+
+.report-review ::v-deep(.el-table td) {
+  background: #fff;
+  color: #333;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.report-review ::v-deep(.el-table tr:hover td) {
+  background: #f5f7fa;
+}
+
+.report-review ::v-deep(.el-button) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.report-review ::v-deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.report-review ::v-deep(.el-button--primary) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.report-review ::v-deep(.el-button--primary:hover) {
+  background: rgba(102, 126, 234, 0.5);
+  border-color: rgba(102, 126, 234, 0.7);
+}
+
+.report-review ::v-deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-review ::v-deep(.el-dialog__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+}
+
+.report-review ::v-deep(.el-dialog__title) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.report-review ::v-deep(.el-dialog__body) {
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.report-review ::v-deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.report-review ::v-deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.report-review ::v-deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.report-review ::v-deep(.el-input-number) {
+  width: 100%;
+}
+
+.report-review ::v-deep(.el-textarea__inner) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.report-review ::v-deep(.el-alert) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-review ::v-deep(.el-alert__title) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.report-review ::v-deep(.el-alert__description) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.report-review ::v-deep(.el-tag) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.report-review ::v-deep(.el-tag--info) {
+  background: rgba(144, 147, 153, 0.1);
+  border-color: rgba(144, 147, 153, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.report-review ::v-deep(.el-divider) {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 </style>

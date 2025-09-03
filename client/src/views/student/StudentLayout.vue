@@ -35,6 +35,10 @@
               <el-icon><VideoCamera /></el-icon>
               <span>教学视频</span>
             </el-menu-item>
+            <el-menu-item index="/student/contents">
+              <el-icon><Notebook /></el-icon>
+              <span>课程资料</span>
+            </el-menu-item>
             <el-menu-item index="/student/code">
               <el-icon><Cpu /></el-icon>
               <span>代码调试</span>
@@ -64,6 +68,7 @@ import { useRouter } from 'vue-router'
 import {
   House,
   VideoCamera,
+  Notebook,
   Cpu,
   Document,
   Trophy,
@@ -81,28 +86,120 @@ const logout = () => {
 
 <style scoped>
 .student-layout {
-  height: 100vh;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #2c3e50;
-  color: white;
-  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 极光, 0.1);
+  padding: 0 30px;
+  height: 70px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .logo {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
+  -webkit-background-cl极光: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
 }
 
 .user-info {
-  color: white;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.user-info ::v-deep(.el-dropdown-link) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.user-info ::v-deep(.el-dropdown-link:hover) {
+  color: #fff;
+}
+
+.user-info ::v-deep(.el-icon) {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.user-info ::v-deep(.el-dropdown-menu) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.user-info ::v-deep(.el-dropdown-menu__item) {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.user-info ::v-deep(.el-dropdown-menu__item:hover) {
+  background: rgba(102, 126, 234, 0.2);
+  color: #fff;
+}
+
+.el-aside {
+  background: rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: calc(100vh - 70px);
 }
 
 .student-menu {
-  height: calc(100vh - 60px);
+  height: 100%;
+  background: transparent;
+  border-right: none;
+}
+
+.student-menu ::v-deep(.el-menu) {
+  background: transparent;
+  border-right: none;
+}
+
+.student-menu ::v-deep(.el-menu-item) {
+  color: rgba(255, 255, 255, 0.7);
+  height: 56px;
+  line-height: 56px;
+  margin: 4px 12px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.student-menu ::v-deep(.el-menu-item:hover) {
+  background: rgba(102, 126, 234, 0.2);
+  color: #fff;
+}
+
+.student-menu ::v-deep(.el-menu-item.is-active) {
+  background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.student-menu ::v-deep(.el-icon) {
+  color: inherit;
+  font-size: 18px;
+}
+
+.el-main {
+  background: transparent;
+  padding: 20px;
+  overflow-x: hidden;
+  min-height: calc(100vh - 70px);
+}
+
+.el-container {
+  min-height: 100vh;
 }
 </style>
