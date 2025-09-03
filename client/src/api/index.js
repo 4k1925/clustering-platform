@@ -41,6 +41,12 @@ const router = createRouter({
           meta: { title: '算法介绍' }
         },
         {
+          path: 'simulation/:algorithm',
+          name: 'AlgorithmSimulation',
+          component: () => import('@/views/student/SimulationView.vue'),
+          meta: { title: '算法模拟' }
+        },
+        {
           path: 'videos',
           name: 'StudentVideos',
           component: () => import('@/views/student/VideoView.vue'),

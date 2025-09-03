@@ -41,21 +41,8 @@ export default {
     return axios.get('/student/classes')
   },
 
-getContents(classId) {
-  return axios.get(`/student/contents?class_id=${classId}`)  // 使用student路由
-},
-getVideos() {
-  return axios.get('/student/videos')
-},
-  // 获取单个内容
-  getContent(contentId) {
-    return axios.get(`/student/contents/${contentId}`)
-  },
-
-  // 下载文件
-downloadFile(contentId) {
-  return axios.get(`/student/contents/${contentId}/download`, {  // 使用student路由
-    responseType: 'blob'
-  })
-}
+  // 获取课程内容
+  getContents(classId) {
+    return axios.get(`/student/contents?class_id=${classId}`)
+  }
 }
