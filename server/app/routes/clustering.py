@@ -43,15 +43,16 @@ def perform_dbscan():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@clustering_bp.route('/hierarchical', methods=['POST'])
+@clustering_bp.route('/gmm', methods=['POST'])
 @login_required
-def perform_hierarchical():
+def perform_gmm():
     data = request.get_json()
     try:
-        result = ClusteringService.perform_hierarchical(
+        result = ClusteringService.perform_gmm(
             data.get('data'),
-            n_clusters=data.get('n_clusters', 3),
-            linkage=data.get('linkage', 'ward')
+            n_components=data.get('n_components', 3),
+            covariance_type=data.get('covariance_type', 'full'),
+            random_state=data.get('random_state', 42)
         )
         return jsonify(result), 200
     except Exception as e:

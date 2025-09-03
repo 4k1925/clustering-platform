@@ -8,9 +8,10 @@ from ..extensions import db
 from ..models.report import Report
 from ..models.content import CourseContent
 from ..models.class_model import Class
-from ..models.user import User, class_user
+from ..models.user import User,class_user
 import traceback
-
+from app.services.code_execution_service import SecurityError, code_executor
+       
 # 创建学生蓝图
 student_bp = Blueprint('student', __name__, url_prefix='/student')
 
@@ -56,122 +57,30 @@ def execute_code():
         data = request.get_json()
         code = data.get('code', '')
         
-        # 实际项目应使用安全沙箱执行代码
-        # 这里仅返回模拟结果
-        return jsonify({
-            'output': f"执行成功\n{code[:100]}...",
-            'status': 'success'
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@student_bp.route('/contents', methods=['GET'])
-@jwt_required()
-def get_student_contents_route():
-    """获取学生课程内容（根据学生所在班级自动过滤）"""
-    try:
-        # 获取当前用户
-        current_user = get_jwt_identity()
-        user_id = current_user['user_id'] if isinstance(current_user, dict) else current_user
-        
-        current_app.logger.info(f"开始获取用户 {user_id} 的课程内容")
-        
-        # 获取学生所在的班级 - 修复动态加载问题
-        from app.models import class_user
-        from app.extensions import db
-        
-        # 正确的方法：直接从关联表查询班级ID
-        class_result = db.session.query(class_user.c.class_id).filter(
-            class_user.c.user_id == user_id
-        ).all()
-        
-        class_ids = [row[0] for row in class_result]  # 提取班级ID
-        
-        current_app.logger.info(f"用户 {user_id} 的班级ID: {class_ids}")
-        
-        # 如果没有加入任何班级，返回空数组
-        if not class_ids:
-            current_app.logger.info("用户未加入任何班级")
-            return jsonify([]), 200
-        
-        # 获取内容类型参数
-        content_type = request.args.get('type')
-        
-        # 构建查询
-        from app.models.content import CourseContent
-        query = CourseContent.query.filter(
-            CourseContent.class_id.in_(class_ids),
-            CourseContent.is_published == True
-        )
-        
-        if content_type:
-            query = query.filter_by(content_type=content_type)
-        
-        contents = query.order_by(CourseContent.created_at.desc()).all()
-        current_app.logger.info(f"查询到 {len(contents)} 条内容")
-        
-        # 简单的序列化方法
-        result = []
-        for content in contents:
-            content_data = {
-                'content_id': content.content_id,
-                'title': content.title,
-                'content_type': content.content_type,
-                'body': content.body or '',
-                'video_url': content.video_url or '',
-                'attachments': content.attachments or [],
-                'is_published': content.is_published,
-                'created_at': content.created_at.isoformat() if content.created_at else None,
-                'updated_at': content.updated_at.isoformat() if content.updated_at else None,
-                'author_id': content.author_id,
-                'class_id': content.class_id
-            }
-            
-            # 如果需要班级信息，可以单独查询
-            if content.class_id:
-                class_info = Class.query.get(content.class_id)
-                if class_info:
-                    content_data['class_name'] = class_info.name
-            
-            result.append(content_data)
-        
-        return jsonify(result), 200
-            
-    except Exception as e:
-        current_app.logger.error(f"获取学生内容失败: {str(e)}")
-        import traceback
-        error_traceback = traceback.format_exc()
-        current_app.logger.error(f"详细错误信息:\n{error_traceback}")
-        return jsonify({'error': '服务器内部错误，请稍后重试'}), 500
-
-@student_bp.route('/videos', methods=['GET'])
-@jwt_required()
-def get_videos():
-    """获取学生所在班级的视频内容"""
-    try:
-        # 获取当前用户
-        current_user = get_jwt_identity()
-        user_id = current_user['user_id'] if isinstance(current_user, dict) else current_user
-        
-        # 导入并调用正确的服务函数
-        from app.services.teacher_service import get_student_contents
-        
-        result = get_student_contents(user_id, 'video')
+        if not code.strip():
+            return jsonify({'error': '代码不能为空'}), 400
+        result = code_executor.execute_code(code)
         
         if result['success']:
-            videos = result['contents']
-            return jsonify([{
-                'id': v['content_id'],
-                'title': v['title'],
-                'url': v['video_url'],
-                'created_at': v['created_at'],
-                'class_name': v.get('class_', {}).get('name', '未知')
-            } for v in videos]), 200
+            return jsonify({
+                'output': result['output'],
+                'error': result['error'],
+                'images': result['images'],
+                'status': 'success'
+            })
         else:
-            return jsonify({'error': result['error']}), 500
+            return jsonify({
+                'output': result['output'],
+                'error': result['error'],
+                'images': [],
+                'status': 'error'
+            }), 400
+            
+    except SecurityError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"获取视频失败: {str(e)}")
-        return jsonify({'error': '获取视频失败'}), 500
+        return jsonify({'error': f'执行失败: {str(e)}'}), 500
+
 # 允许的文件类型
 ALLOWED_EXTENSIONS = {'doc', 'docx', 'pdf', 'wps', 'txt', 'md', 'zip', 'rar'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
@@ -490,5 +399,152 @@ def get_simulation(algorithm):
             'parameters': params,
             'data': points
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@student_bp.route('/videos', methods=['GET'])
+@jwt_required()
+def get_student_videos():
+    """获取学生所在班级的视频内容"""
+    try:
+        # 获取学生所在的班级ID
+        student_classes = Class.query.join(class_user).filter(
+            class_user.c.user_id == current_user.user_id
+        ).all()
+        
+        class_ids = [cls.class_id for cls in student_classes]
+        
+        if not class_ids:
+            return jsonify([]), 200
+            
+        # 查询这些班级中的视频内容
+        videos = CourseContent.query.filter(
+            CourseContent.class_id.in_(class_ids),
+            CourseContent.content_type == 'video',
+            CourseContent.is_published == True
+        ).order_by(CourseContent.created_at.desc()).all()
+        
+        # 转换为字典并添加完整的视频信息
+        videos_data = []
+        for video in videos:
+            video_data = video.to_dict()
+            
+            # 安全地处理视频URL
+            video_data['video_url'] = None
+            
+            # 检查文件路径
+            if video.file_path:
+                video_data['video_url'] = f'/api/content/download/{video.content_id}'
+            else:
+                # 使用getattr安全地访问可能不存在的字段
+                external_url = getattr(video, 'external_url', None)
+                if external_url:
+                    video_data['video_url'] = external_url
+            
+            # 添加班级名称
+            if video.class_obj:
+                video_data['class_name'] = video.class_obj.name
+            else:
+                video_data['class_name'] = '未分类'
+            
+            # 获取推荐视频
+            recommendations = CourseContent.query.filter(
+                CourseContent.class_id.in_(class_ids),
+                CourseContent.content_type == 'video',
+                CourseContent.content_id != video.content_id,
+                CourseContent.is_published == True
+            ).order_by(CourseContent.created_at.desc()).limit(3).all()
+            
+            video_data['recommendations'] = [{
+                'content_id': rec.content_id,
+                'title': rec.title,
+                'class_name': rec.class_obj.name if rec.class_obj else '未分类'
+            } for rec in recommendations]
+            
+            videos_data.append(video_data)
+        
+        print(f"返回视频数据: {len(videos_data)} 个视频")
+        return jsonify(videos_data), 200
+        
+    except Exception as e:
+        print(f"获取学生视频错误: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    
+
+@student_bp.route('/contents', methods=['GET'])
+@jwt_required()
+def get_student_contents():
+    """获取学生所在班级的内容"""
+    try:
+        class_id = request.args.get('class_id')
+        content_type = request.args.get('content_type')
+        
+        # 获取学生所在的班级ID
+        student_classes = Class.query.join(class_user).filter(
+            class_user.c.user_id == current_user.user_id
+        ).all()
+        
+        class_ids = [cls.class_id for cls in student_classes]
+        
+        if not class_ids:
+            return jsonify([]), 200
+        
+        # 构建查询
+        query = CourseContent.query.filter(
+            CourseContent.class_id.in_(class_ids),
+            CourseContent.is_published == True
+        )
+        
+        if class_id and int(class_id) in class_ids:
+            query = query.filter(CourseContent.class_id == class_id)
+        if content_type:
+            query = query.filter(CourseContent.content_type == content_type)
+            
+        contents = query.order_by(CourseContent.created_at.desc()).all()
+        
+        # 转换为字典
+        contents_data = []
+        for content in contents:
+            content_data = content.to_dict()
+            
+            # 添加文件下载URL
+            if content.file_path:
+                content_data['download_url'] = f'/api/student/contents/{content.content_id}/download'
+            else:
+                content_data['download_url'] = None
+                
+            contents_data.append(content_data)
+        
+        return jsonify(contents_data), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@student_bp.route('/contents/<int:content_id>/download', methods=['GET'])
+@jwt_required()
+def download_content(content_id):
+    """下载内容文件"""
+    try:
+        content = CourseContent.query.get_or_404(content_id)
+        
+        # 检查权限：学生必须在该内容的班级中
+        student_classes = Class.query.join(class_user).filter(
+            class_user.c.user_id == current_user.user_id
+        ).all()
+        
+        class_ids = [cls.class_id for cls in student_classes]
+        if content.class_id not in class_ids:
+            return jsonify({'error': '没有权限访问此内容'}), 403
+        
+        if not content.file_path or not os.path.exists(content.file_path):
+            return jsonify({'error': '文件不存在'}), 404
+        
+        return send_file(
+            content.file_path,
+            as_attachment=True,
+            download_name=content.file_name or f"content_{content_id}"
+        )
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500

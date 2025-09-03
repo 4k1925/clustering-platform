@@ -257,51 +257,6 @@ def reset_password(user_id):
     reset_student_password(teacher_id, user_id)
     return jsonify({'message': 'Password reset successfully'}), 200
 
-@teacher_bp.route('/contents', methods=['GET'])
-@jwt_required()
-@teacher_required
-def get_contents():
-    """获取班级内容列表"""
-    class_id = request.args.get('class_id')
-    if not class_id:
-        return jsonify({'error': 'class_id parameter is required'}), 400
-    
-    contents = get_contents_by_class(class_id)
-    return jsonify([c.to_dict() for c in contents]), 200
-
-@teacher_bp.route('/contents', methods=['POST'])
-@jwt_required()
-@teacher_required
-def add_content():
-    """创建新内容"""
-    teacher_id = get_jwt_identity()
-    data = request.get_json()
-    
-    # 验证数据
-    if not data.get('class_id'):
-        return jsonify({'error': '班级ID不能为空'}), 400
-    
-    new_content = create_content(teacher_id, data)
-    return jsonify(new_content.to_dict()), 201
-
-@teacher_bp.route('/contents/<int:content_id>', methods=['PUT'])
-@jwt_required()
-@teacher_required
-def modify_content(content_id):
-    """更新内容"""
-    teacher_id = get_jwt_identity()
-    data = request.get_json()
-    updated_content = update_content(teacher_id, content_id, data)
-    return jsonify(updated_content.to_dict()), 200
-
-@teacher_bp.route('/contents/<int:content_id>', methods=['DELETE'])
-@jwt_required()
-@teacher_required
-def remove_content(content_id):
-    """删除内容"""
-    teacher_id = get_jwt_identity()
-    delete_content(teacher_id, content_id)
-    return jsonify({'message': 'Content deleted successfully'}), 200
 
 @teacher_bp.route('/reports', methods=['GET'])
 @jwt_required()
@@ -458,3 +413,98 @@ def get_class_scores(class_id):
     except Exception as e:
         current_app.logger.error(f"获取班级成绩失败: {str(e)}")
         return jsonify({'error': f'获取班级成绩失败: {str(e)}'}), 500
+    
+
+    # 内容管理路由
+
+@teacher_bp.route('/contents', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_contents():
+    """获取班级内容列表"""
+    class_id = request.args.get('class_id')
+    if not class_id:
+        return jsonify({'error': 'class_id parameter is required'}), 400
+    
+    contents = get_contents_by_class(class_id)
+    return jsonify([c.to_dict() for c in contents]), 200
+
+@teacher_bp.route('/contents', methods=['POST'])
+@jwt_required()
+@teacher_required
+def add_content():
+    """创建新内容"""
+    teacher_id = get_jwt_identity()
+    data = request.get_json()
+    
+    # 验证数据
+    required_fields = ['title', 'content_type', 'class_id']
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({'error': f'{field} 为必填项'}), 400
+    
+    try:
+        new_content = create_content(teacher_id, data)
+        return jsonify(new_content.to_dict()), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@teacher_bp.route('/contents/<int:content_id>', methods=['PUT'])
+@jwt_required()
+@teacher_required
+def modify_content(content_id):
+    """更新内容"""
+    teacher_id = get_jwt_identity()
+    data = request.get_json()
+    
+    try:
+        updated_content = update_content(teacher_id, content_id, data)
+        return jsonify(updated_content.to_dict()), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@teacher_bp.route('/contents/<int:content_id>', methods=['DELETE'])
+@jwt_required()
+@teacher_required
+def remove_content(content_id):
+    """删除内容"""
+    teacher_id = get_jwt_identity()
+    
+    try:
+        delete_content(teacher_id, content_id)
+        return jsonify({'message': '内容删除成功'}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@teacher_bp.route('/upload', methods=['POST'])
+@jwt_required()
+@teacher_required
+def upload_file_route():
+    """文件上传"""
+    if 'file' not in request.files:
+        return jsonify({'error': '没有文件'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': '没有选择文件'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # 创建上传目录
+        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'contents')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        filepath = os.path.join(upload_dir, filename)
+        file.save(filepath)
+        
+        return jsonify({
+            'filename': filename,
+            'filepath': filepath,
+            'filesize': os.path.getsize(filepath)
+        })
+    
+    return jsonify({'error': '不支持的文件类型'}), 400

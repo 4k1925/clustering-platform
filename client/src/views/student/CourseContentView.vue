@@ -1,5 +1,5 @@
 <template>
-  <div class="course-content">
+  <div class="content-view">
     <el-card>
       <template #header>
         <div class="card-header">
@@ -7,85 +7,54 @@
         </div>
       </template>
 
-      <div class="search-bar">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索课程资料"
-          prefix-icon="el-icon-search"
-          clearable
-          @input="handleSearch"
-        />
-      </div>
-
-      <div v-if="loading" class="loading-state">
-        <el-skeleton :rows="5" animated />
-      </div>
-
-      <div v-else-if="filteredContents.length === 0" class="empty-state">
-        <el-empty :description="searchQuery ? '未找到相关课程资料' : '暂无课程资料'" />
+      <div v-if="!contents|| contents.length === 0" class="empty-state">
+        <el-empty description="暂无课程资料" />
       </div>
 
       <div v-else class="content-list">
         <el-card
-          v-for="content in filteredContents"
+          v-for="content in contents"
           :key="content.content_id"
-          class="content-item"
+          class="content-card"
+          shadow="hover"
         >
           <template #header>
             <div class="content-header">
               <h3>{{ content.title }}</h3>
               <div class="content-meta">
                 <el-tag :type="getContentTypeTag(content.content_type)">
-                  {{ getContentTypeText(content.content_type) }}
+                  {{ getContentTypeName(content.content_type) }}
                 </el-tag>
-                <span class="create-time">{{ formatTime(content.created_at) }}</span>
-                <span class="class-name">{{ content.class_?.name || '未知班级' }}</span>
+                <span class="create-time">{{ formatDate(content.created_at) }}</span>
               </div>
             </div>
           </template>
 
           <div class="content-body">
-            <div v-if="content.content_type === 'video' && content.video_url" class="video-content">
-              <div class="video-wrapper">
-                <iframe
-                  v-if="isYouTubeUrl(content.video_url)"
-                  :src="getYouTubeEmbedUrl(content.video_url)"
-                  width="100%"
-                  height="400"
-                  frameborder="0"
-                  allowfullscreen
-                ></iframe>
-                <video
-                  v-else
-                  :src="content.video_url"
-                  controls
-                  width="100%"
-                  height="400"
-                ></video>
+            <!-- 文件类型 -->
+            <div v-if="content.content_type === 'file'" class="file-content">
+              <el-icon><Document /></el-icon>
+              <div class="file-info">
+                <span>{{ content.file_name }}</span>
+                <small>{{ formatFileSize(content.file_size) }}</small>
               </div>
+              <el-button
+                type="primary"
+                size="small"
+                @click="downloadFile(content.content_id)"
+              >
+                下载
+              </el-button>
             </div>
 
+            <!-- 视频类型 -->
+            <div v-else-if="content.content_type === 'video'" class="video-content">
+              <video :src="content.video_url" controls class="video-player"></video>
+            </div>
+
+            <!-- 文章类型 -->
             <div v-else-if="content.content_type === 'article'" class="article-content">
-              <div class="article-body">{{ content.body }}</div>
-            </div>
-
-            <div v-else-if="content.content_type === 'code_example'" class="code-content">
-              <pre><code>{{ content.body }}</code></pre>
-            </div>
-
-            <div v-if="content.attachments && content.attachments.length > 0" class="attachments">
-              <h4>附件：</h4>
-              <div class="attachment-list">
-                <el-link
-                  v-for="(attachment, index) in parseAttachments(content.attachments)"
-                  :key="index"
-                  :href="attachment.url"
-                  target="_blank"
-                  type="primary"
-                >
-                  {{ attachment.name }}
-                </el-link>
-              </div>
+              <p>{{ content.body }}</p>
             </div>
           </div>
         </el-card>
@@ -95,129 +64,74 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Document } from '@element-plus/icons-vue'
 import studentApi from '@/api/student'
 
 const contents = ref([])
-const loading = ref(false)
-const searchQuery = ref('') // 添加搜索查询字段
 
-
-// 计算属性：根据搜索词过滤内容
-const filteredContents = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return contents.value
-  }
-  
-  const query = searchQuery.value.toLowerCase().trim()
-  return contents.value.filter(content => 
-    content.title?.toLowerCase().includes(query) ||
-    content.body?.toLowerCase().includes(query) ||
-    content.content_type?.toLowerCase().includes(query)
-  )
-})
-
-// 搜索处理函数
-const handleSearch = () => {
-  console.log('搜索关键词:', searchQuery.value)
-}
-
-onMounted(async () => {
-  try {
-    await loadContents()
-  } catch (error) {
-    console.error('初始化失败:', error)
-    ElMessage.error('加载失败: ' + (error.response?.data?.error || error.message))
-  }
+onMounted(() => {
+  loadContents()
 })
 
 const loadContents = async () => {
-  loading.value = true
   try {
-    const response = await studentApi.getContents()
-    console.log('API完整响应:', response)
-    
-    // 修复这里的逻辑判断
-    if (Array.isArray(response)) {
-      // 如果API直接返回数组
-      console.log('获取到的课程内容:', response)
-      contents.value = response
-    } else if (response && Array.isArray(response.data)) {
-      // 如果API返回包含data属性的对象
-      console.log('获取到的课程内容:', response.data)
-      contents.value = response.data
-    } else {
-      console.log('未获取到有效的内容数据', response)
-      contents.value = []
-    }
+    const data = await studentApi.getContents(1) // 假设班级ID为1
+    console.log('API返回的数据:', data) // 添加调试信息
+
+    // 确保赋值的是数组
+    contents.value = Array.isArray(data) ? data : []
+    console.log('设置后的contents:', contents.value)
   } catch (error) {
-    console.error('获取内容失败:', error)
-    ElMessage.error('获取课程资料失败: ' + (error.response?.data?.error || error.message))
-    contents.value = []
-  } finally {
-    loading.value = false
+    console.error('加载内容失败:', error)
+    ElMessage.error('加载课程资料失败')
+    contents.value = [] // 确保错误时也设置为空数组
   }
 }
 
+const downloadFile = async (contentId) => {
+  try {
+    const response = await studentApi.downloadFile(contentId)  // 使用新的下载方法
+    const blob = new Blob([response.data])
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = contents.value.find(c => c.content_id === contentId)?.file_name || 'download'
+    link.click()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    ElMessage.error('下载文件失败')
+  }
+}
 const getContentTypeTag = (type) => {
-  const map = {
-    video: 'danger',
-    article: 'success',
-    code_example: 'warning'
-  }
-  return map[type] || ''
+  const map = { video: 'danger', article: 'success', file: 'warning', code: 'info' }
+  return map[type] || 'info'
 }
 
-const getContentTypeText = (type) => {
+const getContentTypeName = (type) => {
   const map = {
     video: '视频',
     article: '文章',
-    code_example: '代码示例'
+    file: '文件',
+    code: '代码示例'
   }
-  return map[type] || type
+  return map[type] || '未知'
 }
 
-const formatTime = (time) => {
-  if (!time) return '未知时间'
-  return new Date(time).toLocaleString('zh-CN')
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
-const isYouTubeUrl = (url) => {
-  if (!url) return false
-  return url.includes('youtube.com') || url.includes('youtu.be')
-}
-
-const getYouTubeEmbedUrl = (url) => {
-  if (!url) return ''
-  if (url.includes('youtube.com')) {
-    const videoId = url.split('v=')[1]?.split('&')[0]
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url
-  } else if (url.includes('youtu.be')) {
-    const videoId = url.split('/').pop()
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url
-  }
-  return url
-}
-
-const parseAttachments = (attachments) => {
-  if (!attachments) return []
-
-  try {
-    if (typeof attachments === 'string') {
-      return attachments.split(',').map(item => {
-        const [name, url] = item.split('|')
-        return { name: name?.trim() || '未命名', url: url?.trim() || '#' }
-      })
-    }
-    return []
-  } catch (error) {
-    console.error('解析附件失败:', error)
-    return []
-  }
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 </script>
-
 <style scoped>
 .course-content {
   padding: 20px;

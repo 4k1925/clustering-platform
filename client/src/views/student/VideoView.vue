@@ -4,17 +4,24 @@
       <template #header>
         <div class="card-header">
           <span>课程视频</span>
+          <el-button type="primary" @click="loadVideos" :loading="loading">
+            刷新视频列表
+          </el-button>
         </div>
       </template>
 
-      <div v-if="videos.length === 0" class="empty-state">
+      <div v-if="loading" class="loading-state">
+        <el-skeleton :rows="3" animated />
+      </div>
+
+      <div v-else-if="videos.length === 0" class="empty-state">
         <el-empty description="暂无视频内容" />
       </div>
 
       <div v-else class="video-list">
         <el-card
           v-for="video in videos"
-          :key="video.id"
+          :key="video.content_id"
           class="video-card"
           shadow="hover"
         >
@@ -23,22 +30,44 @@
               <h3>{{ video.title }}</h3>
               <div class="video-meta">
                 <el-tag type="success">视频</el-tag>
-                <span class="class-name">{{ video.class_name }}</span>
+                <span class="class-name">{{ video.class_name || '未分类' }}</span>
                 <span class="create-time">{{ formatDate(video.created_at) }}</span>
               </div>
             </div>
           </template>
 
           <div class="video-content">
-            <video
-              v-if="video.url"
-              :src="video.url"
-              controls
-              class="video-player"
-            ></video>
+            <div v-if="video.video_url" class="video-player">
+              <video
+                :src="getFullVideoUrl(video.video_url)"
+                controls
+                class="video-element"
+                @play="recordWatchHistory(video.content_id)"
+              ></video>
+            </div>
             <div v-else class="no-video">
               <el-icon><VideoCamera /></el-icon>
-              <p>视频链接无效</p>
+              <p>视频链接无效或未设置</p>
+            </div>
+
+            <div v-if="video.description" class="video-description">
+              <p>{{ video.description }}</p>
+            </div>
+
+            <!-- 推荐视频区域 -->
+            <div v-if="video.recommendations && video.recommendations.length > 0" class="recommendations">
+              <h4>相关推荐</h4>
+              <div class="recommendation-list">
+                <el-tag
+                  v-for="rec in video.recommendations"
+                  :key="rec.content_id"
+                  type="info"
+                  class="recommendation-tag"
+                  @click="goToVideoDetail(rec.content_id)"
+                >
+                  {{ rec.title }}
+                </el-tag>
+              </div>
             </div>
           </div>
         </el-card>
@@ -52,9 +81,11 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { VideoCamera } from '@element-plus/icons-vue'
 import studentApi from '@/api/student'
+import { useRouter } from 'vue-router'
 
 const videos = ref([])
 const loading = ref(false)
+const router = useRouter()
 
 onMounted(() => {
   loadVideos()
@@ -63,24 +94,37 @@ onMounted(() => {
 const loadVideos = async () => {
   loading.value = true
   try {
-    const response = await studentApi.getVideos()
-    // 添加默认值处理
-    videos.value = response?.data || []
+    const data = await studentApi.getVideos()  // 直接获取数据
+    videos.value = Array.isArray(data) ? data : []
+    console.log('视频数据加载成功:', videos.value)
   } catch (error) {
     console.error('加载视频失败:', error)
-    // 更详细的错误信息
-    if (error.response?.status === 500) {
-      ElMessage.error('服务器错误，无法加载视频')
-    } else if (error.response?.status === 404) {
-      ElMessage.error('未找到视频资源')
-    } else {
-      ElMessage.error('加载视频失败，请检查网络连接')
-    }
-    // 确保错误时也有空数组后备值
+    ElMessage.error('加载视频失败')
     videos.value = []
   } finally {
     loading.value = false
   }
+}
+
+const getFullVideoUrl = (url) => {
+  if (!url) return ''
+  // 如果是相对路径，添加基础URL
+  if (url.startsWith('/')) {
+    return `http://localhost:5000${url}`
+  }
+  return url
+}
+
+const recordWatchHistory = async (videoId) => {
+  try {
+    await studentApi.recordWatchHistory(videoId, 0)
+  } catch (error) {
+    console.error('记录观看历史失败:', error)
+  }
+}
+
+const goToVideoDetail = (videoId) => {
+  router.push({ name: 'VideoDetail', params: { id: videoId } })
 }
 
 const formatDate = (dateString) => {

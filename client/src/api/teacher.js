@@ -36,13 +36,35 @@ export default {
   },
   resetPassword: (userId) => axios.post(`/teacher/students/${userId}/reset-password`),
 
-  // 内容管理
-  getContents: (classId) => axios.get(`/teacher/contents?class_id=${classId}`),
-  createContent: (data) => axios.post('/teacher/contents', data),
-  updateContent: (id, data) => axios.put(`/teacher/contents/${id}`, data),
-  deleteContent: (id) => axios.delete(`/teacher/contents/${id}`),
+    getContents(classId) {
+    return axios.get(`/teacher/contents?class_id=${classId}`)
+  },
 
-  // 成绩管理
+  // 创建内容
+  createContent(data) {
+    return axios.post('/teacher/contents', data)
+  },
+
+  // 更新内容
+  updateContent(contentId, data) {
+    return axios.put(`/teacher/contents/${contentId}`, data)
+  },
+
+  // 删除内容
+  deleteContent(contentId) {
+    return axios.delete(`/teacher/contents/${contentId}`)
+  },
+
+  // 上传文件
+  uploadFile(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return axios.post('/teacher/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
 // 成绩管理
   getScoreStatistics: (classId) => axios.get(`/teacher/scores/statistics?class_id=${classId}`),
   getClassScores: (classId) => axios.get(`/teacher/scores/class/${classId}`),
@@ -56,4 +78,7 @@ export default {
     responseType: 'blob',
     ...config
   }),
+    getContentsByType(classId, contentType) {
+    return axios.get(`/contents?class_id=${classId}&type=${contentType}`)
+  }
 }

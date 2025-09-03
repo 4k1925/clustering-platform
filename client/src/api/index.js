@@ -46,6 +46,13 @@ const router = createRouter({
           component: () => import('@/views/student/VideoView.vue'),
           meta: { title: '教学视频' }
         },
+        // 在student路由中添加视频详情页
+        {
+          path: 'video/:id',
+          name: 'VideoDetail',
+          component: () => import('@/views/student/VideoDetailView.vue'),
+          meta: { requiresAuth: true, role: 'student' }
+        },
         {
           path: 'code',
           name: 'StudentCode',

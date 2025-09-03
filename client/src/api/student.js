@@ -41,30 +41,21 @@ export default {
     return axios.get('/student/classes')
   },
 
-getContents(type = null) {
-  const params = {}
-  if (type) {
-    params.type = type
-  }
-  return axios.get('/student/contents', { params })
-    .catch(error => {
-      console.error('API调用错误:', error)
-      return { data: [] }
-    })
+getContents(classId) {
+  return axios.get(`/student/contents?class_id=${classId}`)  // 使用student路由
 },
-
-// 修改getVideos方法
 getVideos() {
   return axios.get('/student/videos')
-    .catch(error => {
-      console.error('获取视频失败:', error)
-      // 返回一个带有空数据的响应，避免前端崩溃
-      return { data: [] }
-    })
 },
+  // 获取单个内容
+  getContent(contentId) {
+    return axios.get(`/student/contents/${contentId}`)
+  },
 
-// 添加获取文章的方法
-getArticles() {
-  return axios.get('/student/contents', { params: { type: 'article' } })
+  // 下载文件
+downloadFile(contentId) {
+  return axios.get(`/student/contents/${contentId}/download`, {  // 使用student路由
+    responseType: 'blob'
+  })
 }
 }
