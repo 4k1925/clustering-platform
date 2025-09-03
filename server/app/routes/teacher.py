@@ -5,7 +5,8 @@ from app.models.user import User,class_user
 from app.models.class_model import Class
 from app.models.report import Report
 from app.models.score import Score
-from app.models.content import CourseContent
+from app.models.course_material import CourseMaterial
+from app.models.video import Video
 # from app.services.user_service import get_user_by_id
 from sqlalchemy.exc import SQLAlchemyError  # 添加这行导入
 from app.extensions import db
@@ -17,17 +18,16 @@ from app.services.teacher_service import (
     get_students_in_class,
     import_students_from_excel,
     reset_student_password,
-    get_contents_by_class,
-    create_content,
-    update_content,
-    delete_content,
     get_reports_by_class,
     review_report,
+    upload_course_material,
 )
+
 from app.utils.decorators import teacher_required
 from app.utils.helpers import allowed_file
 import os
 import uuid
+from datetime import datetime
 
 teacher_bp = Blueprint('teacher', __name__, url_prefix='/api/teacher')
 
@@ -417,94 +417,222 @@ def get_class_scores(class_id):
 
     # 内容管理路由
 
-@teacher_bp.route('/contents', methods=['GET'])
+
+# 视频管理路由
+@teacher_bp.route('/videos', methods=['GET'])
 @jwt_required()
 @teacher_required
-def get_contents():
-    """获取班级内容列表"""
+def get_videos():
+    """获取教师上传的视频列表"""
     class_id = request.args.get('class_id')
     if not class_id:
-        return jsonify({'error': 'class_id parameter is required'}), 400
-    
-    contents = get_contents_by_class(class_id)
-    return jsonify([c.to_dict() for c in contents]), 200
-
-@teacher_bp.route('/contents', methods=['POST'])
-@jwt_required()
-@teacher_required
-def add_content():
-    """创建新内容"""
-    teacher_id = get_jwt_identity()
-    data = request.get_json()
-    
-    # 验证数据
-    required_fields = ['title', 'content_type', 'class_id']
-    for field in required_fields:
-        if field not in data or not data[field]:
-            return jsonify({'error': f'{field} 为必填项'}), 400
+        return jsonify({'error': 'class_id参数是必需的'}), 400
     
     try:
-        new_content = create_content(teacher_id, data)
-        return jsonify(new_content.to_dict()), 201
+        videos = Video.query.filter_by(course_id=class_id).all()
+        return jsonify([video.to_dict() for video in videos]), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        current_app.logger.error(f"获取视频列表失败: {str(e)}")
+        return jsonify({'error': f'获取视频列表失败: {str(e)}'}), 500
 
-@teacher_bp.route('/contents/<int:content_id>', methods=['PUT'])
+@teacher_bp.route('/videos/upload', methods=['POST'])
 @jwt_required()
 @teacher_required
-def modify_content(content_id):
-    """更新内容"""
-    teacher_id = get_jwt_identity()
-    data = request.get_json()
-    
-    try:
-        updated_content = update_content(teacher_id, content_id, data)
-        return jsonify(updated_content.to_dict()), 200
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-@teacher_bp.route('/contents/<int:content_id>', methods=['DELETE'])
-@jwt_required()
-@teacher_required
-def remove_content(content_id):
-    """删除内容"""
-    teacher_id = get_jwt_identity()
-    
-    try:
-        delete_content(teacher_id, content_id)
-        return jsonify({'message': '内容删除成功'}), 200
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-@teacher_bp.route('/upload', methods=['POST'])
-@jwt_required()
-@teacher_required
-def upload_file_route():
-    """文件上传"""
+def upload_video():
+    """上传视频"""
     if 'file' not in request.files:
-        return jsonify({'error': '没有文件'}), 400
+        return jsonify({"success": False, "message": "没有文件部分"}), 400
     
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': '没有选择文件'}), 400
+        return jsonify({"success": False, "message": "没有选择文件"}), 400
     
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # 创建上传目录
-        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'contents')
+    title = request.form.get('title', '')
+    description = request.form.get('description', '')
+    course_id = request.form.get('course_id')
+    user_id = int(get_jwt_identity())
+    
+    if not course_id:
+        return jsonify({"success": False, "message": "缺少课程ID"}), 400
+    
+    try:
+        # 确保上传目录存在
+        upload_dir = os.path.join('app', 'uploads', 'videos')
         os.makedirs(upload_dir, exist_ok=True)
         
-        filepath = os.path.join(upload_dir, filename)
-        file.save(filepath)
+        # 生成唯一文件名
+        filename = secure_filename(file.filename)
+        ext = os.path.splitext(filename)[1]
+        unique_filename = f"{uuid.uuid4().hex}{ext}"
+        
+        # 保存文件
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        file_size = os.path.getsize(file_path)
+        
+        # 创建视频记录
+        video = Video()
+        video.title = title
+        video.description = description
+        video.file_path = file_path
+        video.file_size = file_size
+        video.upload_time = datetime.now()
+        video.user_id = user_id
+        video.course_id = course_id
+        
+        db.session.add(video)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "视频上传成功", "video": video.to_dict()}), 200
+    except Exception as e:
+        current_app.logger.error(f"视频上传失败: {str(e)}")
+        return jsonify({"success": False, "message": f"视频上传失败: {str(e)}"}), 500
+
+@teacher_bp.route('/videos/<int:video_id>', methods=['PUT'])
+@jwt_required()
+@teacher_required
+def update_video(video_id):
+    """更新视频信息"""
+    data = request.json
+    title = data.get('title')
+    description = data.get('description')
+    
+    try:
+        video = Video.query.get(video_id)
+        if not video:
+            return jsonify({"success": False, "message": "视频不存在"}), 404
+        
+        if title:
+            video.title = title
+        if description:
+            video.description = description
+        
+        db.session.commit()
+        return jsonify({"success": True, "message": "视频信息更新成功", "video": video.to_dict()}), 200
+    except Exception as e:
+        current_app.logger.error(f"更新视频信息失败: {str(e)}")
+        return jsonify({"success": False, "message": f"更新视频信息失败: {str(e)}"}), 500
+
+@teacher_bp.route('/videos/<int:video_id>', methods=['DELETE'])
+@jwt_required()
+@teacher_required
+def delete_video(video_id):
+    """删除视频"""
+    try:
+        video = Video.query.get(video_id)
+        if not video:
+            return jsonify({"success": False, "message": "视频不存在"}), 404
+        
+        # 删除文件
+        if os.path.exists(video.file_path):
+            os.remove(video.file_path)
+        
+        # 删除数据库记录
+        db.session.delete(video)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "视频删除成功"}), 200
+    except Exception as e:
+        current_app.logger.error(f"删除视频失败: {str(e)}")
+        return jsonify({"success": False, "message": f"删除视频失败: {str(e)}"}), 500
+
+# 课程资料管理路由
+@teacher_bp.route('/materials', methods=['GET'])
+@jwt_required()
+@teacher_required
+def get_materials():
+    """获取教师上传的课程资料列表"""
+    class_id = request.args.get('class_id')
+    if not class_id:
+        return jsonify({'error': 'class_id参数是必需的'}), 400
+    
+    try:
+        materials = CourseMaterial.query.filter_by(course_id=class_id).all()
+        return jsonify([material.to_dict() for material in materials]), 200
+    except Exception as e:
+        current_app.logger.error(f"获取课程资料列表失败: {str(e)}")
+        return jsonify({'error': f'获取课程资料列表失败: {str(e)}'}), 500
+
+@teacher_bp.route('/materials/upload', methods=['POST'])
+@jwt_required()
+@teacher_required
+def upload_material():
+    """上传课程资料"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"success": False, "message": "没有文件部分"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"success": False, "message": "没有选择文件"}), 400
+        
+        title = request.form.get('title', '')
+        description = request.form.get('description', '')
+        course_id = request.form.get('course_id')
+        user_id = int(get_jwt_identity())
+        
+        if not course_id:
+            return jsonify({"success": False, "message": "缺少课程ID"}), 400
+        
+        # 使用服务层函数
+        material = upload_course_material(file, title, description, user_id, course_id)
         
         return jsonify({
-            'filename': filename,
-            'filepath': filepath,
-            'filesize': os.path.getsize(filepath)
-        })
+            "success": True, 
+            "message": "资料上传成功", 
+            "material": material.to_dict()
+        }), 200
+        
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"资料上传失败: {str(e)}")
+        return jsonify({"success": False, "message": f"资料上传失败: {str(e)}"}), 500
     
-    return jsonify({'error': '不支持的文件类型'}), 400
+@teacher_bp.route('/materials/<int:material_id>', methods=['PUT'])
+@jwt_required()
+@teacher_required
+def update_material(material_id):
+    """更新课程资料信息"""
+    data = request.json
+    title = data.get('title')
+    description = data.get('description')
+    
+    try:
+        material = CourseMaterial.query.get(material_id)
+        if not material:
+            return jsonify({"success": False, "message": "资料不存在"}), 404
+        
+        if title:
+            material.title = title
+        if description:
+            material.description = description
+        
+        db.session.commit()
+        return jsonify({"success": True, "message": "资料信息更新成功", "material": material.to_dict()}), 200
+    except Exception as e:
+        current_app.logger.error(f"更新资料信息失败: {str(e)}")
+        return jsonify({"success": False, "message": f"更新资料信息失败: {str(e)}"}), 500
+
+@teacher_bp.route('/materials/<int:material_id>', methods=['DELETE'])
+@jwt_required()
+@teacher_required
+def delete_material(material_id):
+    """删除课程资料"""
+    try:
+        material = CourseMaterial.query.get(material_id)
+        if not material:
+            return jsonify({"success": False, "message": "资料不存在"}), 404
+        
+        # 删除文件
+        if os.path.exists(material.file_path):
+            os.remove(material.file_path)
+        
+        # 删除数据库记录
+        db.session.delete(material)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "资料删除成功"}), 200
+    except Exception as e:
+        current_app.logger.error(f"删除资料失败: {str(e)}")
+        return jsonify({"success": False, "message": f"删除资料失败: {str(e)}"}), 500

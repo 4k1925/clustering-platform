@@ -10,3 +10,9 @@ migrate = Migrate()
 login_manager = LoginManager()
 jwt = JWTManager()
 cors = CORS()
+
+@login_manager.unauthorized_handler
+def unauthorized_handler():
+    from flask import request, jsonify
+    if request.path.startswith('/api/'):
+        return jsonify({'error': '请先登录'}), 401

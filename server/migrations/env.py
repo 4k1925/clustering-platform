@@ -1,6 +1,6 @@
 import logging
 from logging.config import fileConfig
-from app.extensions import db
+
 from flask import current_app
 
 from alembic import context
@@ -44,17 +44,13 @@ target_db = current_app.extensions['migrate'].db
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def get_metadata():
-    with current_app.app_context():
-        # 显式导入所有模型
-        from app.models.user import User, class_user
-        from app.models.class_model import Class
-        from app.models.report import Report
-        from app.models.score import Score
-        from app.models.content import CourseContent
-        return db.metadata
 
-target_metadata = get_metadata()
+def get_metadata():
+    if hasattr(target_db, 'metadatas'):
+        return target_db.metadatas[None]
+    return target_db.metadata
+
+
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 

@@ -4,7 +4,8 @@ from app.models.class_model import Class
 from app.models.report import Report
 from app.models.score import Score
 from app.models.video_history import VideoWatchHistory
-from app.models.content import CourseContent# 确保 class_user 被导入
+from app.models.course_material import CourseMaterial
+from app.models.video import Video
 from app.models.dict_to import SerializerMixin 
 __all__ = [
     'User',
@@ -13,6 +14,7 @@ __all__ = [
     'Report',
     'Score',
     'VideoWatchHistory',
-    'CourseContent',
+    'CourseMaterial',
+    'Video',
     'SerializerMixin' # 序列化
 ]

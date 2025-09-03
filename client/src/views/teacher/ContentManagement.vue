@@ -13,23 +13,43 @@
                 :value="classItem.class_id"
               />
             </el-select>
+            <el-radio-group v-model="activeTab" style="margin-left: 10px;" @change="handleTabChange">
+              <el-radio-button label="article">课程资料</el-radio-button>
+              <el-radio-button label="video">教学视频</el-radio-button>
+            </el-radio-group>
             <el-button type="primary" @click="showCreateDialog" style="margin-left: 10px;">
-              创建内容
+              {{ activeTab === 'video' ? '上传视频' : '上传资料' }}
             </el-button>
           </div>
         </div>
       </template>
 
-      <el-table :data="contents" border style="width: 100%">
+      <el-table :data="filteredContents" border style="width: 100%">
         <el-table-column prop="title" label="标题" />
-        <el-table-column prop="content_type" label="类型">
+        <el-table-column prop="content_type" label="类型" v-if="activeTab === 'article'">
           <template #default="scope">
             <el-tag :type="getContentTypeTag(scope.row.content_type)">
-              {{ scope.row.content_type }}
+              {{ getContentTypeDisplay(scope.row.content_type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="标签" v-if="selectedContentType === 'video'">
+        <el-table-column label="文件" v-if="activeTab === 'article'">
+          <template #default="scope">
+            <div v-if="scope.row.attachments">
+              <el-button
+                v-for="(file, index) in parseAttachments(scope.row.attachments)"
+                :key="index"
+                size="small"
+                type="success"
+                @click="downloadFile(file.url, file.name)"
+              >
+                {{ file.name }}
+              </el-button>
+            </div>
+            <span v-else style="color: #999;">无附件</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="标签" v-if="activeTab === 'video'">
           <template #default="scope">
             <div v-if="scope.row.tags && scope.row.tags.length > 0">
               <el-tag
@@ -67,23 +87,40 @@
         <el-form-item label="标题" required>
           <el-input v-model="contentForm.title" />
         </el-form-item>
-        <el-form-item label="内容类型" required>
-          <el-select v-model="contentForm.content_type" placeholder="请选择内容类型" @change="handleContentTypeChange">
-            <el-option label="视频" value="video" />
-            <el-option label="文章" value="article" />
-            <el-option label="代码示例" value="code_example" />
-          </el-select>
+        <el-form-item label="内容类型" required v-if="!isEditMode">
+          <el-radio-group v-model="contentForm.content_type" @change="handleContentTypeChange">
+            <el-radio-button :label="activeTab === 'video' ? 'video' : 'article'">
+              {{ activeTab === 'video' ? '视频' : '文章资料' }}
+            </el-radio-button>
+            <el-radio-button v-if="activeTab === 'article'" label="code_example">代码示例</el-radio-button>
+          </el-radio-group>
         </el-form-item>
-        
+
         <!-- 视频特定字段 -->
         <template v-if="contentForm.content_type === 'video'">
-          <el-form-item label="视频URL" required>
-            <el-input v-model="contentForm.video_url" placeholder="输入视频URL或上传路径" />
+          <el-form-item label="视频文件" required>
+            <el-upload
+              class="video-uploader"
+              :action="uploadUrl"
+              :on-success="handleVideoUploadSuccess"
+              :on-error="handleUploadError"
+              :before-upload="beforeVideoUpload"
+              :show-file-list="false"
+              :headers="uploadHeaders"
+            >
+              <div v-if="contentForm.video_url" class="video-preview">
+                <video :src="contentForm.video_url" controls style="max-width: 100%; max-height: 200px;"></video>
+              </div>
+              <el-button v-else type="primary">选择视频文件</el-button>
+              <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
+                <el-progress :percentage="uploadProgress" />
+              </div>
+            </el-upload>
             <div style="font-size: 12px; color: #666; margin-top: 5px;">
-              支持格式：MP4、WebM等视频文件路径
+              支持格式：MP4、WebM等视频文件，最大100MB
             </div>
           </el-form-item>
-          
+
           <el-form-item label="视频标签" required>
             <el-tag
               v-for="tag in contentForm.tags"
@@ -111,25 +148,37 @@
               输入标签后按回车添加，用于视频推荐系统（如：K-Means, 聚类, 无监督学习）
             </div>
           </el-form-item>
-          
+
           <el-form-item label="视频描述">
             <el-input v-model="contentForm.description" type="textarea" :rows="3" placeholder="请输入视频描述..." />
           </el-form-item>
         </template>
-        
+
         <!-- 其他内容类型字段 -->
         <template v-else>
-          <el-form-item label="内容">
-            <el-input v-model="contentForm.body" type="textarea" :rows="10" placeholder="请输入详细内容..." />
+          <el-form-item label="内容描述">
+            <el-input v-model="contentForm.body" type="textarea" :rows="5" placeholder="请输入详细内容描述..." />
           </el-form-item>
-          <el-form-item label="附件">
-            <el-input v-model="contentForm.attachments" placeholder="附件信息（可选）" />
-            <div style="font-size: 12px; color: #666; margin-top: 5px;">
-              格式：文件名1|下载链接1,文件名2|下载链接2
-            </div>
+          <el-form-item label="资料文件">
+            <el-upload
+              class="file-uploader"
+              :action="uploadUrl"
+              :on-success="handleFileUploadSuccess"
+              :on-error="handleUploadError"
+              :before-upload="beforeFileUpload"
+              :on-remove="handleFileRemove"
+              multiple
+              :file-list="fileList"
+              :headers="uploadHeaders"
+            >
+              <el-button type="primary">选择文件</el-button>
+              <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                支持各种文档格式：PDF、Word、Excel、PPT等，单个文件最大50MB
+              </div>
+            </el-upload>
           </el-form-item>
         </template>
-        
+
         <el-form-item label="发布状态">
           <el-switch v-model="contentForm.is_published" />
         </el-form-item>
@@ -143,9 +192,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import teacherApi, { videoUploadUrl, materialUploadUrl } from '@/api/teacher'
 
 const teacherStore = useTeacherStore()
 
@@ -157,6 +207,14 @@ const currentContentId = ref(null)
 const inputVisible = ref(false)
 const inputValue = ref('')
 const tagInputRef = ref(null)
+const activeTab = ref('article') // 默认显示文章资料
+const fileList = ref([])
+const uploadProgress = ref(0)
+const isEditMode = ref(false)
+const uploadUrl = computed(() => activeTab.value === 'video' ? videoUploadUrl : materialUploadUrl)
+const uploadHeaders = {
+  'X-Requested-With': 'XMLHttpRequest'
+}
 
 const contentForm = ref({
   title: '',
@@ -169,11 +227,29 @@ const contentForm = ref({
   class_id: null
 })
 
-const selectedContentType = computed(() => contentForm.value.content_type)
 
 const dialogTitle = computed(() => {
   return currentContentId.value ? '编辑内容' : '创建内容'
 })
+
+// 根据当前选择的标签过滤内容
+const filteredContents = computed(() => {
+  if (activeTab.value === 'video') {
+    return contents.value.filter(item => item.content_type === 'video')
+  } else {
+    return contents.value.filter(item => item.content_type !== 'video')
+  }
+})
+
+// 获取内容类型显示名称
+const getContentTypeDisplay = (type) => {
+  const map = {
+    video: '视频',
+    article: '文章资料',
+    code_example: '代码示例'
+  }
+  return map[type] || type
+}
 
 onMounted(async () => {
   try {
@@ -189,10 +265,44 @@ onMounted(async () => {
   }
 })
 
+// 监听activeTab变化，更新内容类型
+watch(activeTab, (newVal) => {
+  if (dialogVisible.value && !isEditMode.value) {
+    contentForm.value.content_type = newVal === 'video' ? 'video' : 'article'
+  }
+})
+
 const loadContents = async () => {
   if (selectedClass.value) {
     try {
-      contents.value = await teacherStore.fetchContents(selectedClass.value)
+      if (activeTab.value === 'video') {
+        // 加载视频内容
+        const response = await teacherApi.getVideos(selectedClass.value)
+        const videoData = response?.data || []
+        contents.value = videoData.map(video => ({
+          content_id: video.id,
+          title: video.title,
+          content_type: 'video',
+          video_url: video.file_path,
+          description: video.description,
+          tags: '[]', // 视频标签需要单独处理
+          is_published: true,
+          created_at: video.upload_time
+        }))
+      } else {
+        // 加载文章和资料内容
+        const response = await teacherApi.getMaterials(selectedClass.value)
+        const materialData = response?.data || []
+        contents.value = materialData.map(material => ({
+          content_id: material.id,
+          title: material.title,
+          content_type: 'article',
+          body: material.description,
+          attachments: `${material.title}|${material.file_path}`,
+          is_published: true,
+          created_at: material.upload_time
+        }))
+      }
       console.log('获取到的内容:', contents.value)
     } catch (error) {
       console.error('获取内容失败:', error)
@@ -216,10 +326,109 @@ const handleContentTypeChange = (type) => {
     contentForm.value.video_url = ''
     contentForm.value.tags = []
     contentForm.value.description = ''
+    fileList.value = []
   } else {
     contentForm.value.body = ''
     contentForm.value.attachments = ''
   }
+}
+
+// 处理标签切换
+const handleTabChange = (tab) => {
+  activeTab.value = tab
+  // 重新加载内容
+  loadContents()
+}
+
+// 视频上传前的验证
+const beforeVideoUpload = (file) => {
+  const isVideo = file.type.startsWith('video/')
+  const isLt100M = file.size / 1024 / 1024 < 100
+
+  if (!isVideo) {
+    ElMessage.error('只能上传视频文件!')
+    return false
+  }
+  if (!isLt100M) {
+    ElMessage.error('视频大小不能超过100MB!')
+    return false
+  }
+  uploadProgress.value = 0
+  return true
+}
+
+// 文件上传前的验证
+const beforeFileUpload = (file) => {
+  const isLt50M = file.size / 1024 / 1024 < 50
+  if (!isLt50M) {
+    ElMessage.error('文件大小不能超过50MB!')
+    return false
+  }
+  return true
+}
+
+// 视频上传成功处理
+const handleVideoUploadSuccess = (response) => {
+  uploadProgress.value = 100
+  if (response.success) {
+    contentForm.value.video_url = response.video.file_path
+    contentForm.value.title = contentForm.value.title || response.video.title
+    contentForm.value.description = contentForm.value.description || response.video.description
+    ElMessage.success('视频上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+
+// 文件上传成功处理
+const handleFileUploadSuccess = (response, file) => {
+  if (response.success) {
+    // 构建附件信息
+    const newAttachment = `${response.material.title || file.name}|${response.material.file_path}`
+    if (contentForm.value.attachments) {
+      contentForm.value.attachments += `,${newAttachment}`
+    } else {
+      contentForm.value.attachments = newAttachment
+    }
+    ElMessage.success('文件上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+
+// 处理上传错误
+const handleUploadError = (error) => {
+  uploadProgress.value = 0
+  ElMessage.error('上传失败: ' + (error.message || '未知错误'))
+}
+
+// 处理文件移除
+const handleFileRemove = (file) => {
+  // 从attachments中移除对应的文件
+  if (contentForm.value.attachments) {
+    const attachments = contentForm.value.attachments.split(',')
+    const updatedAttachments = attachments.filter(item => !item.startsWith(`${file.name}|`))
+    contentForm.value.attachments = updatedAttachments.join(',')
+  }
+}
+
+// 解析附件字符串为对象数组
+const parseAttachments = (attachmentsStr) => {
+  if (!attachmentsStr) return []
+  return attachmentsStr.split(',').map(item => {
+    const [name, url] = item.split('|')
+    return { name, url }
+  })
+}
+
+// 下载文件
+const downloadFile = (url, filename) => {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 const showTagInput = () => {
@@ -250,22 +459,28 @@ const showCreateDialog = () => {
     return
   }
   currentContentId.value = null
+  isEditMode.value = false
+  fileList.value = []
+  uploadProgress.value = 0
+
   contentForm.value = {
     title: '',
-    content_type: 'article',
+    content_type: activeTab.value === 'video' ? 'video' : 'article',
     body: '',
     video_url: '',
     description: '',
     tags: [],
     is_published: false,
-    class_id: selectedClass.value
+    class_id: selectedClass.value,
+    attachments: ''
   }
   dialogVisible.value = true
 }
 
 const editContent = (content) => {
   currentContentId.value = content.content_id
-  
+  isEditMode.value = true
+
   // 处理标签数据（从JSON字符串转换为数组）
   let tags = []
   try {
@@ -274,12 +489,31 @@ const editContent = (content) => {
     console.warn('解析标签失败:', e)
     tags = []
   }
-  
+
+  // 设置文件列表
+  fileList.value = []
+  if (content.attachments) {
+    const attachments = parseAttachments(content.attachments)
+    fileList.value = attachments.map(item => ({
+      name: item.name,
+      url: item.url,
+      status: 'success'
+    }))
+  }
+
   contentForm.value = {
     ...content,
     tags: tags,
     class_id: selectedClass.value
   }
+
+  // 如果是视频内容，确保切换到视频标签
+  if (content.content_type === 'video' && activeTab.value !== 'video') {
+    activeTab.value = 'video'
+  } else if (content.content_type !== 'video' && activeTab.value === 'video') {
+    activeTab.value = 'article'
+  }
+
   dialogVisible.value = true
 }
 
@@ -290,10 +524,10 @@ const submitContentForm = async () => {
       ElMessage.warning('请输入标题')
       return
     }
-    
+
     if (contentForm.value.content_type === 'video') {
       if (!contentForm.value.video_url) {
-        ElMessage.warning('请输入视频URL')
+        ElMessage.warning('请上传视频文件')
         return
       }
       if (contentForm.value.tags.length === 0) {
@@ -305,19 +539,46 @@ const submitContentForm = async () => {
     // 确保class_id正确设置
     contentForm.value.class_id = selectedClass.value
 
-    // 准备提交数据（将标签数组转换为JSON字符串）
-    const submitData = {
-      ...contentForm.value,
-      tags: JSON.stringify(contentForm.value.tags) // 转换为JSON字符串
+    // 根据内容类型调用不同的API
+    if (contentForm.value.content_type === 'video') {
+      // 视频内容处理
+      const videoData = {
+        title: contentForm.value.title,
+        description: contentForm.value.description,
+        tags: JSON.stringify(contentForm.value.tags)
+      }
+
+      if (currentContentId.value) {
+        // 更新视频
+        await teacherApi.updateVideo(currentContentId.value, videoData)
+        ElMessage.success('视频更新成功')
+      } else {
+        // 视频已通过上传处理，这里只需更新信息
+        if (!contentForm.value.video_url) {
+          ElMessage.warning('请先上传视频文件')
+          return
+        }
+      }
+    } else {
+      // 文章或资料内容处理
+      const materialData = {
+        title: contentForm.value.title,
+        description: contentForm.value.body
+      }
+
+      if (currentContentId.value) {
+        // 更新资料
+        await teacherApi.updateMaterial(currentContentId.value, materialData)
+        ElMessage.success('资料更新成功')
+      } else {
+        // 资料已通过上传处理，这里只需更新信息
+        if (!contentForm.value.attachments) {
+          ElMessage.warning('请先上传资料文件')
+          return
+        }
+      }
     }
 
-    if (currentContentId.value) {
-      await teacherStore.updateContent(currentContentId.value, submitData)
-      ElMessage.success('内容更新成功')
-    } else {
-      await teacherStore.createContent(submitData)
-      ElMessage.success('内容创建成功')
-    }
     dialogVisible.value = false
 
     // 重新加载内容列表
@@ -336,7 +597,14 @@ const deleteContent = async (contentId) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await teacherStore.deleteContent(contentId)
+
+    // 根据当前标签类型调用不同的删除API
+    if (activeTab.value === 'video') {
+      await teacherApi.deleteVideo(contentId)
+    } else {
+      await teacherApi.deleteMaterial(contentId)
+    }
+
     ElMessage.success('内容删除成功')
     await loadContents()
   } catch (error) {

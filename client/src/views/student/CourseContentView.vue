@@ -4,10 +4,17 @@
       <template #header>
         <div class="card-header">
           <span>课程资料</span>
+          <el-button type="primary" @click="loadContents" :loading="loading">
+            刷新资料列表
+          </el-button>
         </div>
       </template>
 
-      <div v-if="!contents|| contents.length === 0" class="empty-state">
+      <div v-if="loading" class="loading-state">
+        <el-skeleton :rows="3" animated />
+      </div>
+
+      <div v-else-if="!contents || contents.length === 0" class="empty-state">
         <el-empty description="暂无课程资料" />
       </div>
 
@@ -32,11 +39,14 @@
 
           <div class="content-body">
             <!-- 文件类型 -->
-            <div v-if="content.content_type === 'file'" class="file-content">
+            <div class="file-content">
               <el-icon><Document /></el-icon>
               <div class="file-info">
                 <span>{{ content.file_name }}</span>
                 <small>{{ formatFileSize(content.file_size) }}</small>
+              </div>
+              <div class="file-description" v-if="content.body">
+                <p>{{ content.body }}</p>
               </div>
               <el-button
                 type="primary"
@@ -45,16 +55,6 @@
               >
                 下载
               </el-button>
-            </div>
-
-            <!-- 视频类型 -->
-            <div v-else-if="content.content_type === 'video'" class="video-content">
-              <video :src="content.video_url" controls class="video-player"></video>
-            </div>
-
-            <!-- 文章类型 -->
-            <div v-else-if="content.content_type === 'article'" class="article-content">
-              <p>{{ content.body }}</p>
             </div>
           </div>
         </el-card>
@@ -70,29 +70,47 @@ import { Document } from '@element-plus/icons-vue'
 import studentApi from '@/api/student'
 
 const contents = ref([])
+const loading = ref(false)
 
 onMounted(() => {
   loadContents()
 })
 
 const loadContents = async () => {
+  loading.value = true
   try {
-    const data = await studentApi.getContents(1) // 假设班级ID为1
-    console.log('API返回的数据:', data) // 添加调试信息
+    // 获取课程资料
+    const response = await studentApi.getMaterials()
+    console.log('API返回的数据:', response) // 添加调试信息
 
-    // 确保赋值的是数组
-    contents.value = Array.isArray(data) ? data : []
+    // 处理响应数据
+    if (response && response.data) {
+      contents.value = response.data.map(material => ({
+        content_id: material.id,
+        title: material.title,
+        content_type: 'file',
+        body: material.description,
+        file_name: material.title,
+        file_size: material.file_size || 0,
+        file_path: material.file_path,
+        created_at: material.upload_time
+      }))
+    } else {
+      contents.value = []
+    }
     console.log('设置后的contents:', contents.value)
   } catch (error) {
     console.error('加载内容失败:', error)
     ElMessage.error('加载课程资料失败')
     contents.value = [] // 确保错误时也设置为空数组
+  } finally {
+    loading.value = false
   }
 }
 
 const downloadFile = async (contentId) => {
   try {
-    const response = await studentApi.downloadFile(contentId)  // 使用新的下载方法
+    const response = await studentApi.downloadMaterial(contentId)  // 使用新的下载方法
     const blob = new Blob([response.data])
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -100,6 +118,7 @@ const downloadFile = async (contentId) => {
     link.download = contents.value.find(c => c.content_id === contentId)?.file_name || 'download'
     link.click()
     window.URL.revokeObjectURL(url)
+    ElMessage.success('文件下载成功')
   } catch (error) {
     console.error('下载文件失败:', error)
     ElMessage.error('下载文件失败')

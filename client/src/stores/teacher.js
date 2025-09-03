@@ -235,6 +235,91 @@ async reviewReport(reportId, data) {
       this.classScores = []
       throw error
     }
+  },
+  // 内容管理
+async fetchMaterials(classId) {
+  try {
+    const response = await teacherApi.getMaterials(classId)
+    this.materials = response.data || response
+    return this.materials
+  } catch (error) {
+    console.error('获取课程资料失败:', error)
+    this.materials = []
+    throw error
   }
+},
+
+async uploadMaterial(formData) {
+  try {
+    const response = await teacherApi.uploadMaterial(formData)
+    return response
+  } catch (error) {
+    console.error('上传资料失败:', error)
+    throw error
+  }
+},
+
+async updateMaterial(materialId, data) {
+  try {
+    const response = await teacherApi.updateMaterial(materialId, data)
+    return response
+  } catch (error) {
+    console.error('更新资料失败:', error)
+    throw error
+  }
+},
+
+async deleteMaterial(materialId) {
+  try {
+    await teacherApi.deleteMaterial(materialId)
+    this.materials = this.materials.filter(m => m.id !== materialId)
+  } catch (error) {
+    console.error('删除资料失败:', error)
+    throw error
+  }
+},
+
+// 视频管理
+async fetchVideos(classId) {
+  try {
+    const response = await teacherApi.getVideos(classId)
+    this.videos = response.data || response
+    return this.videos
+  } catch (error) {
+    console.error('获取视频列表失败:', error)
+    this.videos = []
+    throw error
+  }
+},
+
+async uploadVideo(formData) {
+  try {
+    const response = await teacherApi.uploadVideo(formData)
+    return response
+  } catch (error) {
+    console.error('上传视频失败:', error)
+    throw error
+  }
+},
+
+async updateVideo(videoId, data) {
+  try {
+    const response = await teacherApi.updateVideo(videoId, data)
+    return response
+  } catch (error) {
+    console.error('更新视频失败:', error)
+    throw error
+  }
+},
+
+async deleteVideo(videoId) {
+  try {
+    await teacherApi.deleteVideo(videoId)
+    this.videos = this.videos.filter(v => v.id !== videoId)
+  } catch (error) {
+    console.error('删除视频失败:', error)
+    throw error
+  }
+}
   }
 })

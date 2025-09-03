@@ -1,18 +1,26 @@
 import os
+import uuid
+import traceback
+from datetime import datetime
 from sqlite3 import IntegrityError
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
+
 import pandas as pd
+from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
+
+# 项目内部导入
+from app import db
 from app.extensions import db
-from app.models.user import User,class_user
+from app.models.user import User, class_user  # class_user为用户-班级关联表（多对多）
 from app.models.class_model import Class
 from app.models.report import Report
 from app.models.score import Score
-from app.models.content import CourseContent
-from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.security import generate_password_hash
-from datetime import datetime
-import openpyxl
-import uuid
+from app.models.course_material import CourseMaterial
+from app.models.video import Video
+from app.utils.file_utils import save_file, get_file_size  # 外部工具函数
+
 
 def get_classes_by_teacher(teacher_id):
     """获取教师管理的所有班级"""
@@ -311,61 +319,141 @@ def reset_student_password(teacher_id, student_id):
         db.session.rollback()
         raise e
 
-def get_contents_by_class(class_id):
-    """获取班级内容列表"""
-    return CourseContent.query.filter_by(class_id=class_id).order_by(CourseContent.created_at.desc()).all()
-
-def create_content(teacher_id, data):
-    """创建新内容"""
-    try:
-        new_content = CourseContent(
-            title=data.get('title'),
-            content_type=data.get('content_type'),
-            body=data.get('body'),
-            video_url=data.get('video_url'),
-            is_published=data.get('is_published', False),
-            author_id=teacher_id,
-            class_id=data.get('class_id')
-        )
-        db.session.add(new_content)
-        db.session.commit()
-        return new_content
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        raise e
-
-def update_content(teacher_id, content_id, data):
-    """更新内容"""
-    content = CourseContent.query.filter_by(content_id=content_id, author_id=teacher_id).first()
-    if not content:
-        raise ValueError("Content not found or you don't have permission")
+def upload_course_material(file, title, description, user_id, course_id):
+    """上传课程资料"""
+    if not file:
+        raise ValueError("没有文件被上传")
     
-    try:
-        content.title = data.get('title', content.title)
-        content.content_type = data.get('content_type', content.content_type)
-        content.body = data.get('body', content.body)
-        content.video_url = data.get('video_url', content.video_url)
-        content.is_published = data.get('is_published', content.is_published)
-        content.updated_at = datetime.utcnow()
+    # 安全处理文件名
+    filename = secure_filename(file.filename)
+    
+    # 确保上传目录存在
+    upload_dir = os.path.join('app', 'uploads', 'materials')
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # 生成唯一文件名
+    ext = os.path.splitext(filename)[1]
+    unique_filename = f"{uuid.uuid4().hex}{ext}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    # 保存文件
+    file.save(file_path)
+    file_size = os.path.getsize(file_path)
+    file_type = ext[1:] if ext.startswith('.') else ext
+    
+    # 创建课程资料记录
+    material = CourseMaterial(
+        title=title,
+        description=description,
+        file_path=file_path,
+        file_size=file_size,
+        file_type=file_type,
+        upload_time=datetime.now(),
+        user_id=user_id,
+        course_id=course_id
+    )
+    
+    db.session.add(material)
+    db.session.commit()
+    
+    return material
+
+def get_course_materials(course_id):
+    """获取课程的所有资料"""
+    return CourseMaterial.query.filter_by(course_id=course_id).all()
+
+def delete_course_material(material_id):
+    """删除课程资料"""
+    material = CourseMaterial.query.get(material_id)
+    if not material:
+        raise ValueError("资料不存在")
+    
+    # 删除文件
+    if os.path.exists(material.file_path):
+        os.remove(material.file_path)
+    
+    # 删除数据库记录
+    db.session.delete(material)
+    db.session.commit()
+
+
+def upload_video(file, title, description, user_id, course_id):
+    """上传视频文件"""
+    if not file:
+        return {"success": False, "message": "没有文件被上传"}
         
-        db.session.commit()
-        return content
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        raise e
-
-def delete_content(teacher_id, content_id):
-    """删除内容"""
-    content = CourseContent.query.filter_by(content_id=content_id, author_id=teacher_id).first()
-    if not content:
-        raise ValueError("Content not found or you don't have permission")
+    # 安全处理文件名
+    filename = secure_filename(file.filename)
+        
+    # 确保上传目录存在
+    upload_dir = os.path.join('app', 'uploads', 'videos')
+    os.makedirs(upload_dir, exist_ok=True)
+        
+    # 保存文件
+    file_path = save_file(file, upload_dir)
+    file_size = get_file_size(file_path)
+        
+    # 创建视频记录
+    video = Video(
+        title=title,
+        description=description,
+        file_path=file_path,
+        file_size=file_size,
+        upload_time=datetime.now(),
+        user_id=user_id,
+        course_id=course_id
+        )
+        
+    db.session.add(video)
+    db.session.commit()
+        
+    return {"success": True, "message": "视频上传成功", "video": video.to_dict()}
     
+
+def get_videos_by_course(course_id):
+    """获取课程的所有视频"""
+    videos = Video.query.filter_by(course_id=course_id).all()
+    return [video.to_dict() for video in videos]
+    
+def get_video_by_id(video_id):
+    """根据ID获取视频"""
+    video = Video.query.get(video_id)
+    if not video:
+        return None
+    return video.to_dict()
+    
+
+def update_video(video_id, title=None, description=None):
+    """更新视频信息"""
+    video = Video.query.get(video_id)
+    if not video:
+        return {"success": False, "message": "视频不存在"}
+        
+    if title:
+        video.title = title
+    if description:
+        video.description = description
+        
+    db.session.commit()
+    return {"success": True, "message": "视频信息更新成功", "video": video.to_dict()}
+    
+def delete_video(video_id):
+    """删除视频"""
+    video = Video.query.get(video_id)
+    if not video:
+        raise ValueError("视频不存在")
+        
+        # 删除文件
     try:
-        db.session.delete(content)
-        db.session.commit()
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        raise e
+        if os.path.exists(video.file_path):
+           os.remove(video.file_path)
+    except Exception as e:
+        return {"success": False, "message": f"删除文件失败: {str(e)}"}
+        # 删除数据库记录
+    db.session.delete(video)
+    db.session.commit()    
+    return {"success": True, "message": "视频删除成功"}
+
 
 def get_reports_by_class(class_id, status='submitted'):
     """获取班级报告列表"""
@@ -437,7 +525,6 @@ def get_student_scores_with_reports(class_id):
     
     return student_scores
 
-def get_student_contents(student_id, content_type=None):
     """获取学生所在班级的课程内容"""
     try:
         # 获取学生所在的班级

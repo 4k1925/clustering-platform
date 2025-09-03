@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>课程视频</span>
+          <span>教学视频</span>
           <el-button type="primary" @click="loadVideos" :loading="loading">
             刷新视频列表
           </el-button>
@@ -42,6 +42,7 @@
                 :src="getFullVideoUrl(video.video_url)"
                 controls
                 class="video-element"
+                :data-video-id="video.content_id"
                 @play="recordWatchHistory(video.content_id)"
               ></video>
             </div>
@@ -94,8 +95,20 @@ onMounted(() => {
 const loadVideos = async () => {
   loading.value = true
   try {
-    const data = await studentApi.getVideos()  // 直接获取数据
-    videos.value = Array.isArray(data) ? data : []
+    const response = await studentApi.getVideos()
+    // 处理响应数据
+    if (response && response.data) {
+      videos.value = response.data.map(video => ({
+        content_id: video.id,
+        title: video.title,
+        description: video.description,
+        video_url: video.file_path,
+        created_at: video.upload_time,
+        class_name: video.course_name
+      }))
+    } else {
+      videos.value = []
+    }
     console.log('视频数据加载成功:', videos.value)
   } catch (error) {
     console.error('加载视频失败:', error)
@@ -117,7 +130,14 @@ const getFullVideoUrl = (url) => {
 
 const recordWatchHistory = async (videoId) => {
   try {
-    await studentApi.recordWatchHistory(videoId, 0)
+    // 获取视频元素，计算当前播放进度
+    const videoElement = document.querySelector(`video[data-video-id="${videoId}"]`)
+    let progress = 0
+    if (videoElement) {
+      progress = Math.floor((videoElement.currentTime / videoElement.duration) * 100)
+    }
+    await studentApi.recordWatchHistory(videoId, progress)
+    console.log(`记录视频 ${videoId} 观看进度: ${progress}%`)
   } catch (error) {
     console.error('记录观看历史失败:', error)
   }

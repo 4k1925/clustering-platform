@@ -41,21 +41,40 @@ export default {
     return axios.get('/student/classes')
   },
 
-getContents(classId) {
-  return axios.get(`/student/contents?class_id=${classId}`)  // 使用student路由
-},
-getVideos() {
-  return axios.get('/student/videos')
-},
-  // 获取单个内容
-  getContent(contentId) {
-    return axios.get(`/student/contents/${contentId}`)
+  // 获取视频列表
+  getVideos(classId) {
+    return axios.get(`/student/videos?class_id=${classId || ''}`)
   },
 
-  // 下载文件
-downloadFile(contentId) {
-  return axios.get(`/student/contents/${contentId}/download`, {  // 使用student路由
-    responseType: 'blob'
-  })
-}
+  // 获取视频详情
+  getVideoDetail(videoId) {
+    return axios.get(`/student/videos/${videoId}`)
+  },
+
+  // 记录视频观看历史
+  recordWatchHistory(videoId, progress) {
+    return axios.post(`/student/videos/${videoId}/history`, { progress })
+  },
+
+  // 获取视频推荐
+  getVideoRecommendations(videoId) {
+    return axios.get(`/student/videos/${videoId}/recommendations`)
+  },
+
+  // 获取课程资料列表
+  getMaterials(classId) {
+    return axios.get(`/student/materials?class_id=${classId || ''}`)
+  },
+
+  // 获取课程资料详情
+  getMaterialDetail(materialId) {
+    return axios.get(`/student/materials/${materialId}`)
+  },
+
+  // 下载课程资料
+  downloadMaterial(materialId) {
+    return axios.get(`/student/materials/${materialId}/download`, {
+      responseType: 'blob'
+    })
+  }
 }

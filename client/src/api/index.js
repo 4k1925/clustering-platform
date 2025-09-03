@@ -78,12 +78,11 @@ const router = createRouter({
           meta: { title: '课程资料' }
         },
         {
-          path: 'simulation/:algorithm?',
+          path: 'simulation/:algorithm',
           name: 'AlgorithmSimulation',
           component: () => import('@/views/student/SimulationView.vue'),
-          meta: { title: '算法模拟' },
-          props: true
-        }
+          meta: { title: '算法模拟' }
+        },
       ]
     },
     // 教师端路由

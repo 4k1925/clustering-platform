@@ -263,8 +263,8 @@ const renderSimulation = () => {
 
 const getClusterColor = (clusterIdx) => {
   const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#27ae60']
-  return clusterIdx !== null && clusterIdx !== undefined && clusterIdx >= 0 
-    ? colors[clusterIdx % colors.length] 
+  return clusterIdx !== null && clusterIdx !== undefined && clusterIdx >= 0
+    ? colors[clusterIdx % colors.length]
     : '#95a5a6' // 灰色表示未分类点
 }
 
