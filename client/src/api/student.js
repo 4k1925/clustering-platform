@@ -41,6 +41,7 @@ export default {
     return axios.get('/student/classes')
   },
 
+
   // 获取视频列表
   getVideos(classId) {
     return axios.get(`/student/videos?class_id=${classId || ''}`)
@@ -76,5 +77,6 @@ export default {
     return axios.get(`/student/materials/${materialId}/download`, {
       responseType: 'blob'
     })
+
   }
 }

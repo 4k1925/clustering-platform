@@ -515,6 +515,43 @@ def get_student_classes():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@student_bp.route('/contents', methods=['GET'])
+@jwt_required()
+def get_student_contents():
+    """获取学生课程内容"""
+    try:
+        class_id = request.args.get('class_id')
+        if not class_id:
+            return jsonify({'error': 'class_id parameter is required'}), 400
+        
+        # 验证学生是否在该班级
+        class_member = db.session.query(class_user).filter(
+            class_user.c.class_id == class_id,
+            class_user.c.user_id == current_user.user_id
+        ).first()
+        
+        if not class_member:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # 获取该班级的已发布内容
+        contents = CourseContent.query.filter_by(
+            class_id=class_id,
+            is_published=True
+        ).order_by(CourseContent.created_at.desc()).all()
+        
+        return jsonify([{
+            'content_id': c.content_id,
+            'title': c.title,
+            'content_type': c.content_type,
+            'body': c.body,
+            'video_url': c.video_url,
+            'attachments': c.attachments,
+            'is_published': c.is_published,
+            'created_at': c.created_at.isoformat(),
+            'updated_at': c.updated_at.isoformat() if c.updated_at else None
+        } for c in contents])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @student_bp.route('/simulation/<algorithm>', methods=['GET'])
 @jwt_required()

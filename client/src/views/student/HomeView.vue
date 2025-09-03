@@ -157,6 +157,7 @@
             <el-button @click="toggleAnimation">
               {{ isAnimating ? '暂停' : '播放' }}
             </el-button>
+<<<<<<< HEAD
             <el-button @click="stepForward" :disabled="!canStepForward">
               <el-icon><ArrowRight /></el-icon>
             </el-button>
@@ -242,6 +243,76 @@
   </div>
 </div>
       </div>
+=======
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="高斯混合模型(GMM)" name="gmm">
+        <h3>高斯混合模型(GMM)算法</h3>
+        <p>高斯混合模型是一种基于概率模型的聚类算法，假设数据由多个高斯分布混合生成，通过EM算法进行参数估计。</p>
+
+        <div class="algorithm-details">
+          <h4>核心概念:</h4>
+          <ul>
+            <li><strong>概率模型:</strong> 每个数据点属于各个簇的概率，而不是硬分配</li>
+            <li><strong>EM算法:</strong> 通过期望最大化(Expectation-Maximization)算法迭代优化参数</li>
+            <li><strong>软聚类:</strong> 提供每个点属于各个簇的概率分布</li>
+          </ul>
+
+          <h4>关键参数:</h4>
+          <ul>
+            <li><strong>分量数量:</strong> 高斯分布的数量（即簇的数量）</li>
+            <li><strong>协方差类型:</strong> 
+              <ul>
+                <li>Full - 完全协方差矩阵</li>
+                <li>Tied - 所有分量共享同一协方差矩阵</li>
+                <li>Diag - 对角协方差矩阵</li>
+                <li>Spherical - 球面协方差矩阵</li>
+              </ul>
+            </li>
+            <li><strong>收敛阈值:</strong> 似然函数变化的停止条件</li>
+          </ul>
+
+          <h4>优点:</h4>
+          <ul>
+            <li>提供软聚类结果，包含概率信息</li>
+            <li>能够处理不同形状和大小的簇</li>
+            <li>有坚实的统计学理论基础</li>
+            <li>可以用于密度估计和新颖点检测</li>
+          </ul>
+
+          <h4>应用场景:</h4>
+          <ul>
+            <li>图像分割和计算机视觉</li>
+            <li>语音识别和音频处理</li>
+            <li>生物信息学和基因表达分析</li>
+            <li>任何需要概率输出的聚类任务</li>
+          </ul>
+
+          <h4>数学模型:</h4>
+          <p>GMM的概率密度函数为：</p>
+          <p class="formula">p(x) = Σ<sub>k=1</sub><sup>K</sup> π<sub>k</sub> N(x | μ<sub>k</sub>, Σ<sub>k</sub>)</p>
+          <p>其中：</p>
+          <ul>
+            <li>π<sub>k</sub> - 第k个高斯分布的混合系数</li>
+            <li>μ<sub>k</sub> - 第k个高斯分布的均值向量</li>
+            <li>Σ<sub>k</sub> - 第k个高斯分布的协方差矩阵</li>
+            <li>N(x | μ, Σ) - 多元高斯分布</li>
+          </ul>
+        </div>
+
+        <div class="simulation-link">
+          <el-button
+            type="primary"
+            @click="goToSimulation('gmm')"
+          >
+            GMM算法动态模拟
+          </el-button>
+        </div>
+      </el-tab-pane>
+
+      </el-tabs>
+>>>>>>> 847f08304cc3da9224239a0ab4f63164bb632ead
     </el-card>
   </div>
 </template>
