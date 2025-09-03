@@ -4,6 +4,7 @@ from .config import Config
 from app.extensions import db, migrate, login_manager, jwt, cors
 from app.utils.helpers import ensure_upload_folder
 from app.models.user import User  # 在这里导入 User
+from .import models
 
 def create_app(config_class=Config):
     """应用工厂函数"""
@@ -67,7 +68,6 @@ def register_blueprints(app):
     app.register_blueprint(student_bp, url_prefix='/api/student')
     app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
-
 def configure_cors(app):
     cors.init_app(
         app,

@@ -5,15 +5,15 @@
         <div class="card-header">
           <h2>代码调试</h2>
           <el-select
-            v-model="currentTemplate"
-            placeholder="选择代码模板"
+            v-model="currentAlgorithm"
+            placeholder="选择算法"
             @change="loadTemplate"
           >
             <el-option
-              v-for="template in codeTemplates"
-              :key="template.value"
-              :label="template.label"
-              :value="template.value"
+              v-for="algorithm in algorithms"
+              :key="algorithm.value"
+              :label="algorithm.label"
+              :value="algorithm.value"
             />
           </el-select>
         </div>
@@ -49,20 +49,20 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { ElMessage, ElEmpty } from 'element-plus' // 关键修复
+import { ref, onMounted } from 'vue'
+import { ElMessage, ElEmpty } from 'element-plus'
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
-import studentAPI from '@/api/student'
+import studentApi from '@/api/student'
 
 const code = ref('')
 const output = ref('')
-const currentTemplate = ref('kmeans')
+const currentAlgorithm = ref('kmeans')
 const isExecuting = ref(false)
 
-const codeTemplates = [
-  { value: 'kmeans', label: 'K-Means 示例' },
-  { value: 'dbscan', label: 'DBSCAN 示例' },
-  { value: 'hierarchical', label: '层次聚类示例' }
+const algorithms = [
+  { value: 'kmeans', label: 'K-Means 聚类' },
+  { value: 'dbscan', label: 'DBSCAN 聚类' },
+  { value: 'hierarchical', label: '高斯混合聚类GMM' }
 ]
 
 const editorOptions = {
@@ -72,13 +72,26 @@ const editorOptions = {
   scrollBeyondLastLine: false
 }
 
-const loadTemplate = async () => {
+const loadTemplate = async (algorithm = null) => {
+  const algo = algorithm || currentAlgorithm.value
   try {
-    const response = await studentAPI.getAlgorithmContent(currentTemplate.value)
-    code.value = response.data.codeTemplate || defaultTemplate(currentTemplate.value)
+    console.log('正在加载算法模板:', algo)
+    const response = await studentApi.getAlgorithmContent(algo)
+    console.log('模板响应:', response)
+
+    // 安全地访问模板数据
+    if (response && response.codeTemplate) {
+      code.value = response.codeTemplate
+    } else if (response && typeof response === 'object') {
+      // 尝试不同的属性名
+      code.value = response.template || response.content || defaultTemplate(algo)
+    } else {
+      code.value = defaultTemplate(algo)
+    }
   } catch (error) {
     console.error('加载模板失败:', error)
-    code.value = defaultTemplate(currentTemplate.value)
+    code.value = defaultTemplate(algo)
+    ElMessage.warning('使用默认代码模板')
   }
 }
 
@@ -109,6 +122,7 @@ plt.scatter(X[:, 0], X[:, 1], c=labels, s=50, cmap='viridis')
 plt.scatter(centroids[:, 0], centroids[:, 1], c='red', s=200, alpha=0.5)
 plt.title('K-Means聚类结果')
 plt.show()`,
+
     dbscan: `# DBSCAN 聚类示例
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -130,29 +144,71 @@ print("核心样本数量:", len(dbscan.core_sample_indices_))
 plt.scatter(X[:, 0], X[:, 1], c=clusters, s=50, cmap='viridis')
 plt.title('DBSCAN聚类结果')
 plt.show()`,
-    hierarchical: `# 层次聚类示例
+
+    gmm: `# 高斯混合聚类(GMM)示例
 import numpy as np
-from scipy.cluster.hierarchy import dendrogram, linkage
+from sklearn.mixture import GaussianMixture
 from sklearn.datasets import make_blobs
 import matplotlib.pyplot as plt
+from scipy import linalg
+import itertools
 
 # 生成样本数据
-X, y = make_blobs(n_samples=20, centers=3, n_features=2, random_state=0)
+X, y_true = make_blobs(n_samples=400, centers=4,
+                       cluster_std=0.60, random_state=0)
+X = X[:, ::-1]  # 翻转坐标轴以便更好地绘图
 
-# 进行层次聚类
-Z = linkage(X, 'ward')
+# 创建GMM实例并拟合数据
+gmm = GaussianMixture(n_components=4, random_state=42)
+gmm.fit(X)
+labels = gmm.predict(X)
 
-# 绘制树状图
-plt.figure(figsize=(10, 6))
-dendrogram(Z)
-plt.title('层次聚类树状图')
-plt.xlabel('样本索引')
-plt.ylabel('距离')
-plt.show()`
+# 输出结果
+print("聚类完成!")
+print("每个高斯分布的权重:", gmm.weights_)
+print("每个高斯分布的均值:\\n", gmm.means_)
+print("收敛所需的迭代次数:", gmm.n_iter_)
+print("BIC值:", gmm.bic(X))
+print("AIC值:", gmm.aic(X))
+
+# 可视化结果
+plt.figure(figsize=(10, 8))
+
+# 绘制数据点
+plt.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+
+# 绘制高斯分布的椭圆
+def plot_ellipses(ax, weights, means, covars):
+    for n in range(len(weights)):
+        if covars[n].shape == (2, 2):
+            v, w = linalg.eigh(covars[n])
+            u = w[0] / linalg.norm(w[0])
+            angle = np.arctan2(u[1], u[0])
+            angle = 180 * angle / np.pi  # 转换为度
+            v = 2. * np.sqrt(2.) * np.sqrt(v)
+            ell = plt.matplotlib.patches.Ellipse(means[n], v[0], v[1],
+                                                180 + angle, color='red',
+                                                alpha=weights[n] * 2)
+            ell.set_clip_box(ax.bbox)
+            ell.set_alpha(0.3)
+            ax.add_artist(ell)
+
+plot_ellipses(plt.gca(), gmm.weights_, gmm.means_, gmm.covariances_)
+
+plt.title('高斯混合聚类(GMM)结果')
+plt.xlabel('特征 1')
+plt.ylabel('特征 2')
+plt.grid(True, alpha=0.3)
+plt.show()
+
+# 概率预测示例
+probs = gmm.predict_proba(X)
+print("前5个样本属于各个簇的概率:\\n", probs[:5])`
   }
 
-  return templates[algorithm] || '请选择代码模板'
+  return templates[algorithm] || '# 请选择算法并编写代码'
 }
+
 
 const executeCode = async () => {
   if (!code.value.trim()) {
@@ -161,28 +217,43 @@ const executeCode = async () => {
   }
 
   isExecuting.value = true
-  output.value = ''
+  output.value = '执行中...'
 
   try {
-    const response = await studentAPI.executeCode({
+    const response = await studentApi.executeCode({
       code: code.value,
-      algorithm: currentTemplate.value
+      algorithm: currentAlgorithm.value
     })
-    output.value = response.data.output
+
+    // 安全地处理响应
+    if (response && response.output) {
+      output.value = response.output
+    } else if (response && typeof response === 'object') {
+      output.value = JSON.stringify(response, null, 2)
+    } else {
+      output.value = '执行完成，无输出结果'
+    }
+
+    ElMessage.success('代码执行成功')
   } catch (error) {
-    output.value = `执行错误: ${error.response?.data?.message || error.message}`
+    console.error('执行错误:', error)
+    output.value = `执行错误: ${error.response?.data?.error || error.message || '未知错误'}`
+    ElMessage.error('代码执行失败')
   } finally {
     isExecuting.value = false
   }
 }
 
 const resetCode = () => {
-  code.value = defaultTemplate(currentTemplate.value)
+  code.value = defaultTemplate(currentAlgorithm.value)
   output.value = ''
+  ElMessage.info('代码已重置')
 }
 
 // 初始化加载模板
-loadTemplate()
+onMounted(() => {
+  loadTemplate()
+})
 </script>
 
 <style scoped>
@@ -192,7 +263,7 @@ loadTemplate()
 
 .code-debug-view ::v-deep(.el-card) {
   border-radius: 20px;
-  box-shadow: 
+  box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1),
     inset 0 0 20px rgba(255, 255, 255, 0.05);
@@ -219,7 +290,7 @@ loadTemplate()
   background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-cl极光: text;
+  background-clip: text;
   font-size: 24px;
   font-weight: 600;
 }

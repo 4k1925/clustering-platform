@@ -1,7 +1,11 @@
 {
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "date-fns": "^4.1.0",
     "echarts": "^6.0.0",
     "monaco-editor": "^0.52.2"
+  },
+  "devDependencies": {
+    "vite-plugin-monaco-editor": "^1.1.0"
   }
 }

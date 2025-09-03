@@ -29,6 +29,21 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="标签" v-if="selectedContentType === 'video'">
+          <template #default="scope">
+            <div v-if="scope.row.tags && scope.row.tags.length > 0">
+              <el-tag
+                v-for="(tag, index) in JSON.parse(scope.row.tags || '[]')"
+                :key="index"
+                size="small"
+                style="margin-right: 4px; margin-bottom: 4px;"
+              >
+                {{ tag }}
+              </el-tag>
+            </div>
+            <span v-else style="color: #999;">无标签</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="is_published" label="状态">
           <template #default="scope">
             <el-tag :type="scope.row.is_published ? 'success' : 'info'">
@@ -53,27 +68,68 @@
           <el-input v-model="contentForm.title" />
         </el-form-item>
         <el-form-item label="内容类型" required>
-          <el-select v-model="contentForm.content_type" placeholder="请选择内容类型">
+          <el-select v-model="contentForm.content_type" placeholder="请选择内容类型" @change="handleContentTypeChange">
             <el-option label="视频" value="video" />
             <el-option label="文章" value="article" />
             <el-option label="代码示例" value="code_example" />
           </el-select>
         </el-form-item>
-        <el-form-item label="视频URL" v-if="contentForm.content_type === 'video'">
-          <el-input v-model="contentForm.video_url" placeholder="输入视频URL" />
-          <div style="font-size: 12px; color: #666; margin-top: 5px;">
-            支持格式：YouTube、Bilibili、腾讯视频等外链
-          </div>
-        </el-form-item>
-        <el-form-item label="内容" v-if="contentForm.content_type !== 'video'">
-          <el-input v-model="contentForm.body" type="textarea" :rows="10" placeholder="请输入详细内容..." />
-        </el-form-item>
-        <el-form-item label="附件" v-if="contentForm.content_type !== 'video'">
-          <el-input v-model="contentForm.attachments" placeholder="附件信息（可选）" />
-          <div style="font-size: 12px; color: #666; margin-top: 5px;">
-            格式：文件名1|下载链接1,文件名2|下载链接2
-          </div>
-        </el-form-item>
+        
+        <!-- 视频特定字段 -->
+        <template v-if="contentForm.content_type === 'video'">
+          <el-form-item label="视频URL" required>
+            <el-input v-model="contentForm.video_url" placeholder="输入视频URL或上传路径" />
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+              支持格式：MP4、WebM等视频文件路径
+            </div>
+          </el-form-item>
+          
+          <el-form-item label="视频标签" required>
+            <el-tag
+              v-for="tag in contentForm.tags"
+              :key="tag"
+              closable
+              size="medium"
+              style="margin-right: 8px; margin-bottom: 8px;"
+              @close="removeTag(tag)"
+            >
+              {{ tag }}
+            </el-tag>
+            <el-input
+              v-if="inputVisible"
+              ref="tagInputRef"
+              v-model="inputValue"
+              size="small"
+              style="width: 120px;"
+              @keyup.enter="handleTagInputConfirm"
+              @blur="handleTagInputConfirm"
+            />
+            <el-button v-else size="small" @click="showTagInput">
+              + 添加标签
+            </el-button>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+              输入标签后按回车添加，用于视频推荐系统（如：K-Means, 聚类, 无监督学习）
+            </div>
+          </el-form-item>
+          
+          <el-form-item label="视频描述">
+            <el-input v-model="contentForm.description" type="textarea" :rows="3" placeholder="请输入视频描述..." />
+          </el-form-item>
+        </template>
+        
+        <!-- 其他内容类型字段 -->
+        <template v-else>
+          <el-form-item label="内容">
+            <el-input v-model="contentForm.body" type="textarea" :rows="10" placeholder="请输入详细内容..." />
+          </el-form-item>
+          <el-form-item label="附件">
+            <el-input v-model="contentForm.attachments" placeholder="附件信息（可选）" />
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+              格式：文件名1|下载链接1,文件名2|下载链接2
+            </div>
+          </el-form-item>
+        </template>
+        
         <el-form-item label="发布状态">
           <el-switch v-model="contentForm.is_published" />
         </el-form-item>
@@ -87,7 +143,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useTeacherStore } from '@/stores/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -98,24 +154,32 @@ const contents = ref([])
 const selectedClass = ref(null)
 const dialogVisible = ref(false)
 const currentContentId = ref(null)
+const inputVisible = ref(false)
+const inputValue = ref('')
+const tagInputRef = ref(null)
+
 const contentForm = ref({
   title: '',
   content_type: 'article',
   body: '',
   video_url: '',
+  description: '',
+  tags: [], // 改为数组格式
   is_published: false,
   class_id: null
 })
 
+const selectedContentType = computed(() => contentForm.value.content_type)
+
 const dialogTitle = computed(() => {
   return currentContentId.value ? '编辑内容' : '创建内容'
 })
+
 onMounted(async () => {
   try {
     classes.value = await teacherStore.fetchClasses()
     console.log('获取到的班级:', classes.value)
 
-    // 确保contents数组已初始化
     if (!Array.isArray(teacherStore.contents)) {
       teacherStore.contents = []
     }
@@ -124,11 +188,7 @@ onMounted(async () => {
     ElMessage.error('获取班级列表失败')
   }
 })
-// const loadContents = async () => {
-//   if (selectedClass.value) {
-//     contents.value = await teacherStore.fetchContents(selectedClass.value)
-//   }
-// }
+
 const loadContents = async () => {
   if (selectedClass.value) {
     try {
@@ -150,6 +210,40 @@ const getContentTypeTag = (type) => {
   return map[type] || ''
 }
 
+const handleContentTypeChange = (type) => {
+  // 切换内容类型时重置相关字段
+  if (type !== 'video') {
+    contentForm.value.video_url = ''
+    contentForm.value.tags = []
+    contentForm.value.description = ''
+  } else {
+    contentForm.value.body = ''
+    contentForm.value.attachments = ''
+  }
+}
+
+const showTagInput = () => {
+  inputVisible.value = true
+  nextTick(() => {
+    tagInputRef.value?.focus()
+  })
+}
+
+const handleTagInputConfirm = () => {
+  if (inputValue.value) {
+    const tag = inputValue.value.trim()
+    if (tag && !contentForm.value.tags.includes(tag)) {
+      contentForm.value.tags.push(tag)
+    }
+  }
+  inputVisible.value = false
+  inputValue.value = ''
+}
+
+const removeTag = (tag) => {
+  contentForm.value.tags = contentForm.value.tags.filter(t => t !== tag)
+}
+
 const showCreateDialog = () => {
   if (!selectedClass.value) {
     ElMessage.warning('请先选择班级')
@@ -161,6 +255,8 @@ const showCreateDialog = () => {
     content_type: 'article',
     body: '',
     video_url: '',
+    description: '',
+    tags: [],
     is_published: false,
     class_id: selectedClass.value
   }
@@ -169,28 +265,62 @@ const showCreateDialog = () => {
 
 const editContent = (content) => {
   currentContentId.value = content.content_id
+  
+  // 处理标签数据（从JSON字符串转换为数组）
+  let tags = []
+  try {
+    tags = JSON.parse(content.tags || '[]')
+  } catch (e) {
+    console.warn('解析标签失败:', e)
+    tags = []
+  }
+  
   contentForm.value = {
     ...content,
-    class_id: selectedClass.value // 确保class_id正确
+    tags: tags,
+    class_id: selectedClass.value
   }
   dialogVisible.value = true
 }
 
 const submitContentForm = async () => {
   try {
+    // 验证必填字段
+    if (!contentForm.value.title) {
+      ElMessage.warning('请输入标题')
+      return
+    }
+    
+    if (contentForm.value.content_type === 'video') {
+      if (!contentForm.value.video_url) {
+        ElMessage.warning('请输入视频URL')
+        return
+      }
+      if (contentForm.value.tags.length === 0) {
+        ElMessage.warning('请至少添加一个视频标签')
+        return
+      }
+    }
+
     // 确保class_id正确设置
     contentForm.value.class_id = selectedClass.value
 
+    // 准备提交数据（将标签数组转换为JSON字符串）
+    const submitData = {
+      ...contentForm.value,
+      tags: JSON.stringify(contentForm.value.tags) // 转换为JSON字符串
+    }
+
     if (currentContentId.value) {
-      await teacherStore.updateContent(currentContentId.value, contentForm.value)
+      await teacherStore.updateContent(currentContentId.value, submitData)
       ElMessage.success('内容更新成功')
     } else {
-      await teacherStore.createContent(contentForm.value)
+      await teacherStore.createContent(submitData)
       ElMessage.success('内容创建成功')
     }
     dialogVisible.value = false
 
-    // 无论创建还是更新，都重新加载内容列表确保数据一致
+    // 重新加载内容列表
     await loadContents()
 
   } catch (error) {
@@ -291,7 +421,7 @@ const deleteContent = async (contentId) => {
 
 .content-management ::v-deep(.el-button--danger) {
   background: rgba(245, 108, 108, 0.2);
-  border-color: rgba(245, 108, 极光, 0.3);
+  border-color: rgba(245, 108, 108, 0.3);
   color: #f56c6c;
 }
 
@@ -349,5 +479,19 @@ const deleteContent = async (contentId) => {
 
 .content-management ::v-deep(.el-switch) {
   --el-switch-on-color: #667eea;
+}
+
+/* 标签样式 */
+.content-management ::v-deep(.el-tag) {
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.content-management ::v-deep(.el-tag--small) {
+  height: 24px;
+  line-height: 22px;
+  padding: 0 8px;
 }
 </style>

@@ -6,11 +6,6 @@ export default {
     return axios.get(`/student/algorithms/${algorithm}`)
   },
 
-  // 获取教学视频列表
-  getVideos() {
-    return axios.get('/student/videos')
-  },
-
   // 提交代码执行
   executeCode(codeData) {
     return axios.post('/student/code/execute', codeData)
@@ -39,5 +34,28 @@ export default {
   // 获取算法模拟数据
   getSimulationData(algorithm, params) {
     return axios.get(`/student/simulation/${algorithm}`, { params })
-  }
+  },
+
+  // 获取学生班级列表
+  getClasses() {
+    return axios.get('/student/classes')
+  },
+
+getContents(classId) {
+  return axios.get(`/student/contents?class_id=${classId}`)  // 使用student路由
+},
+getVideos() {
+  return axios.get('/student/videos')
+},
+  // 获取单个内容
+  getContent(contentId) {
+    return axios.get(`/student/contents/${contentId}`)
+  },
+
+  // 下载文件
+downloadFile(contentId) {
+  return axios.get(`/student/contents/${contentId}/download`, {  // 使用student路由
+    responseType: 'blob'
+  })
+}
 }

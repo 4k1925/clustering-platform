@@ -96,7 +96,7 @@ const logout = () => {
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 极光, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 30px;
   height: 70px;
   position: sticky;
@@ -108,7 +108,7 @@ const logout = () => {
   font-size: 24px;
   font-weight: 600;
   background: linear-gradient(135deg, #667eea 0%, #9b59b6 100%);
-  -webkit-background-cl极光: text;
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);

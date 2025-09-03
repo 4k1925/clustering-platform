@@ -3,58 +3,71 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>教学视频</span>
-          <el-select v-model="selectedClass" placeholder="选择班级" @change="loadVideos">
-            <el-option
-              v-for="classItem in classes"
-              :key="classItem.class_id"
-              :label="classItem.name"
-              :value="classItem.class_id"
-            />
-          </el-select>
+          <span>课程视频</span>
+          <el-button type="primary" @click="loadVideos" :loading="loading">
+            刷新视频列表
+          </el-button>
         </div>
       </template>
 
-      <div v-if="videos.length === 0" class="empty-state">
-        <el-empty description="暂无教学视频" />
+      <div v-if="loading" class="loading-state">
+        <el-skeleton :rows="3" animated />
+      </div>
+
+      <div v-else-if="videos.length === 0" class="empty-state">
+        <el-empty description="暂无视频内容" />
       </div>
 
       <div v-else class="video-list">
         <el-card
           v-for="video in videos"
           :key="video.content_id"
-          class="video-item"
+          class="video-card"
+          shadow="hover"
         >
           <template #header>
             <div class="video-header">
               <h3>{{ video.title }}</h3>
               <div class="video-meta">
-                <span class="create-time">{{ formatTime(video.created_at) }}</span>
+                <el-tag type="success">视频</el-tag>
+                <span class="class-name">{{ video.class_name || '未分类' }}</span>
+                <span class="create-time">{{ formatDate(video.created_at) }}</span>
               </div>
             </div>
           </template>
 
           <div class="video-content">
-            <div class="video-player">
-              <iframe
-                v-if="isYouTubeUrl(video.video_url)"
-                :src="getYouTubeEmbedUrl(video.video_url)"
-                width="100%"
-                height="400"
-                frameborder="0"
-                allowfullscreen
-              ></iframe>
+            <div v-if="video.video_url" class="video-player">
               <video
-                v-else
-                :src="video.video_url"
+                :src="getFullVideoUrl(video.video_url)"
                 controls
-                width="100%"
-                height="400"
+                class="video-element"
+                @play="recordWatchHistory(video.content_id)"
               ></video>
             </div>
-            
-            <div class="video-description">
-              <p>{{ video.body }}</p>
+            <div v-else class="no-video">
+              <el-icon><VideoCamera /></el-icon>
+              <p>视频链接无效或未设置</p>
+            </div>
+
+            <div v-if="video.description" class="video-description">
+              <p>{{ video.description }}</p>
+            </div>
+
+            <!-- 推荐视频区域 -->
+            <div v-if="video.recommendations && video.recommendations.length > 0" class="recommendations">
+              <h4>相关推荐</h4>
+              <div class="recommendation-list">
+                <el-tag
+                  v-for="rec in video.recommendations"
+                  :key="rec.content_id"
+                  type="info"
+                  class="recommendation-tag"
+                  @click="goToVideoDetail(rec.content_id)"
+                >
+                  {{ rec.title }}
+                </el-tag>
+              </div>
             </div>
           </div>
         </el-card>
@@ -66,67 +79,58 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { VideoCamera } from '@element-plus/icons-vue'
 import studentApi from '@/api/student'
+import { useRouter } from 'vue-router'
 
-const pageTitle = ref('教学视频')
-const classes = ref([])
 const videos = ref([])
-const selectedClass = ref(null)
+const loading = ref(false)
+const router = useRouter()
 
-onMounted(async () => {
-  try {
-    await loadClasses()
-  } catch (error) {
-    console.error('初始化失败:', error)
-    ElMessage.error('加载失败')
-  }
+onMounted(() => {
+  loadVideos()
 })
 
-const loadClasses = async () => {
-  try {
-    const response = await studentApi.getClasses()
-    classes.value = response.data
-  } catch (error) {
-    console.error('获取班级失败:', error)
-    ElMessage.error('获取班级列表失败')
-  }
-}
-
 const loadVideos = async () => {
-  if (!selectedClass.value) {
-    videos.value = []
-    return
-  }
-  
+  loading.value = true
   try {
-    const response = await studentApi.getContents(selectedClass.value)
-    videos.value = response.data.filter(item => item.content_type === 'video')
+    const data = await studentApi.getVideos()  // 直接获取数据
+    videos.value = Array.isArray(data) ? data : []
+    console.log('视频数据加载成功:', videos.value)
   } catch (error) {
-    console.error('获取视频失败:', error)
-    ElMessage.error('获取教学视频失败')
+    console.error('加载视频失败:', error)
+    ElMessage.error('加载视频失败')
+    videos.value = []
+  } finally {
+    loading.value = false
   }
 }
 
-const formatTime = (time) => {
-  return new Date(time).toLocaleString('zh-CN')
-}
-
-const isYouTubeUrl = (url) => {
-  return url.includes('youtube.com') || url.includes('youtu.be')
-}
-
-const getYouTubeEmbedUrl = (url) => {
-  if (url.includes('youtube.com')) {
-    const videoId = url.split('v=')[1]?.split('&')[0]
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url
-  } else if (url.includes('youtu.be')) {
-    const videoId = url.split('/').pop()
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url
+const getFullVideoUrl = (url) => {
+  if (!url) return ''
+  // 如果是相对路径，添加基础URL
+  if (url.startsWith('/')) {
+    return `http://localhost:5000${url}`
   }
   return url
 }
-</script>
 
+const recordWatchHistory = async (videoId) => {
+  try {
+    await studentApi.recordWatchHistory(videoId, 0)
+  } catch (error) {
+    console.error('记录观看历史失败:', error)
+  }
+}
+
+const goToVideoDetail = (videoId) => {
+  router.push({ name: 'VideoDetail', params: { id: videoId } })
+}
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString('zh-CN')
+}
+</script>
 <style scoped>
 .video-view {
   padding: 20px;
@@ -134,7 +138,7 @@ const getYouTubeEmbedUrl = (url) => {
 
 .video-view ::v-deep(.el-card) {
   border-radius: 20px;
-  box-shadow: 
+  box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1),
     inset 0 0 20px rgba(255, 255, 255, 0.05);

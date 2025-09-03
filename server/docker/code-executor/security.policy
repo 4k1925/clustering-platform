@@ -1,0 +1,13 @@
+# 禁止的危险操作
+DENY: import os
+DENY: import sys
+DENY: import subprocess
+DENY: import shutil
+DENY: import socket
+DENY: import threading
+DENY: import multiprocessing
+DENY: __import__
+DENY: eval
+DENY: exec
+DENY: open
+DENY: compile

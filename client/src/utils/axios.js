@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // 注意这里要加上/api前缀
+  baseURL: 'http://localhost:5000/api',
   withCredentials: true,
   timeout: 10000,
   headers: {
