@@ -5,18 +5,6 @@ from sklearn.datasets import make_blobs, make_moons, make_circles
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 import json
-<<<<<<< HEAD
-def get_algorithm_content(self, algorithm):
-    """获取算法介绍内容（简化实现）"""
-    # 实际项目中应从数据库获取
-    return {
-        'title': f'{algorithm} Algorithm',
-        'description': f'This is the {algorithm} clustering algorithm',
-        'code_template': f'# {algorithm} code template'
-    }
-=======
->>>>>>> 847f08304cc3da9224239a0ab4f63164bb632ead
-
 def generate_data_points(n_samples, data_type='uniform'):
     """生成不同类型的数据点"""
     if data_type == 'gaussian':

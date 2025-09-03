@@ -161,7 +161,7 @@
               <el-icon><ArrowRight /></el-icon>
             </el-button>
             <span>步骤: {{ currentStep + 1 }}/{{ simulationData.steps?.length || 0 }}</span>
-            
+
             <div class="speed-control">
               <span>速度:</span>
               <el-slider v-model="animationSpeed" :min="100" :max="2000" :step="100" style="width: 100px" />
@@ -187,7 +187,7 @@
         <el-icon><Edit /></el-icon>
         点击选择质心位置 ({{ customCentroids.length }}/{{ kValue }})
       </div>
-      
+
       <!-- 工具提示 -->
       <div class="tooltip" v-if="tooltip.visible" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
         <template v-if="tooltip.data.isCentroid">
@@ -207,11 +207,11 @@
         </template>
       </div>
     </div>
-    
+
     <div v-if="simulationData" class="step-description">
       <el-icon><InfoFilled /></el-icon>
       {{ currentStepDescription }}
-      
+
       <!-- 添加性能指标显示 -->
       <div v-if="currentStep === simulationData.steps.length - 1 && simulationData.metrics" class="performance-metrics">
         <span class="metric-item" v-if="simulationData.metrics.silhouette">
@@ -360,12 +360,12 @@ const startSimulation = async () => {
 }
 
     await clusteringStore.simulateAlgorithm(algorithm.value, params)
-    
+
     // 等待DOM更新后渲染
     await nextTick()
     initializeCanvas()
     renderSimulation()
-    
+
   } catch (err) {
     error.value = err.message || '模拟失败'
     // 开发环境下使用模拟数据
@@ -402,21 +402,21 @@ const handleCanvasClick = (event) => {
   const rect = canvasContainer.value.getBoundingClientRect()
   const x = xScale.value.invert(event.clientX - rect.left)
   const y = yScale.value.invert(event.clientY - rect.top)
-  
+
   // 限制在合理范围内
   const clampedX = Math.max(0, Math.min(10, x))
   const clampedY = Math.max(0, Math.min(10, y))
-  
+
   // 添加自定义质心
   customCentroids.value.push({
     x: clampedX,
     y: clampedY
   })
-  
+
   // 在画布上显示临时标记
   if (svg.value) {
     svg.value.selectAll('.temp-centroid').remove()
-    
+
     customCentroids.value.forEach((centroid, index) => {
       svg.value.append('circle')
         .attr('class', 'temp-centroid')
@@ -427,7 +427,7 @@ const handleCanvasClick = (event) => {
         .attr('stroke', '#000')
         .attr('stroke-width', 2)
         .attr('opacity', 0.8)
-      
+
       svg.value.append('text')
         .attr('class', 'temp-centroid-label')
         .attr('x', xScale.value(centroid.x) + 12)
@@ -438,7 +438,7 @@ const handleCanvasClick = (event) => {
         .text(`${index + 1}`)
     })
   }
-  
+
   // 如果已选择足够数量的质心，自动停止选择
   if (customCentroids.value.length >= kValue.value) {
     isSelectingCentroids.value = false
@@ -453,34 +453,34 @@ watch(kValue, (newValue) => {
 })
 const initializeCanvas = () => {
   if (!canvasContainer.value) return;
-  
+
   // 清除现有内容
   d3.select(canvasContainer.value).selectAll('*').remove();
-  
+
   const width = canvasContainer.value.clientWidth;
   const height = canvasContainer.value.clientHeight;
-  
+
   // 创建SVG
   svg.value = d3.select(canvasContainer.value)
     .append('svg')
     .attr('width', width)
     .attr('height', height)
     .attr('class', 'simulation-svg');
-  
+
   // 设置比例尺 - 增加边距，让画布更大
   const margin = { top: 20, right: 20, bottom: 40, left: 60 }; // 增加边距
-  
+
   xScale.value = d3.scaleLinear()
     .domain([0, 10])
     .range([margin.left, width - margin.right]); // 使用边距
-  
+
   yScale.value = d3.scaleLinear()
     .domain([0, 10])
     .range([height - margin.bottom, margin.top]); // 使用边距
-  
+
   // 添加网格
   addGrid();
-  
+
 
 };
 
@@ -493,7 +493,7 @@ const renderSimulation = () => {
   if (steps.length === 0) return;
 
   const currentStepData = steps[currentStep.value];
-  
+
   // 清除之前的可视化元素
   svg.value.selectAll('.data-point').remove();
   svg.value.selectAll('.centroid').remove();
@@ -553,7 +553,7 @@ const renderSimulation = () => {
       if (prevStepData.centroids) {
         currentStepData.centroids.forEach((centroid, idx) => {
           const prevCentroid = prevStepData.centroids[idx];
-          if (prevCentroid && 
+          if (prevCentroid &&
               (prevCentroid.x !== centroid.x || prevCentroid.y !== centroid.y)) {
             svg.value.append('line')
               .attr('class', 'centroid-line')
@@ -617,7 +617,7 @@ const renderSimulation = () => {
   if (currentStep.value === steps.length - 1 && simulationData.value.metrics) {
     const metrics = simulationData.value.metrics;
     let metricsText = `轮廓系数: ${metrics.silhouette}`;
-    
+
     if (metrics.sse) metricsText += ` | SSE: ${metrics.sse}`;
     if (metrics.iterations) metricsText += ` | 迭代: ${metrics.iterations}`;
     if (metrics.clusters) metricsText += ` | 簇数: ${metrics.clusters}`;
@@ -674,10 +674,10 @@ const addGrid = () => {
 const addLegend = (currentStepData) => {
   // 先清除之前的图例
   svg.value.selectAll('.legend').remove();
-  
+
   const points = currentStepData.points || [];
   const clusters = [...new Set(points.map(p => p.cluster))].filter(c => c >= 0);
-  
+
   if (clusters.length === 0) return;
 
   // 对簇序号进行排序和重新映射
@@ -693,7 +693,7 @@ const addLegend = (currentStepData) => {
 
   sortedClusters.forEach((clusterId, index) => {
     const displayIndex = clusterMap.get(clusterId); // 获取显示序号
-    
+
     const legendItem = legend.append('g')
       .attr('transform', `translate(0, ${index * 25})`);
 
@@ -715,7 +715,7 @@ const addLegend = (currentStepData) => {
   if (points.some(p => p.cluster === -1)) {
     const noiseItem = legend.append('g')
       .attr('transform', `translate(0, ${sortedClusters.length * 25})`);
-    
+
     noiseItem.append('circle')
       .attr('r', 6)
       .attr('fill', getClusterColor(-1))
@@ -734,23 +734,15 @@ const addLegend = (currentStepData) => {
 
 // 获取簇颜色
 const getClusterColor = (clusterIdx) => {
-<<<<<<< HEAD
-  const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#27ae60']
-  return clusterIdx !== null && clusterIdx !== undefined && clusterIdx >= 0
-    ? colors[clusterIdx % colors.length]
-    : '#95a5a6' // 灰色表示未分类点
-}
-=======
   const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#F9A602', 
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#F9A602',
     '#8A4FFF', '#00C853', '#FF4081', '#3F51B5',
     '#FF9800', '#9C27B0', '#2196F3', '#4CAF50'
   ];
-  return clusterIdx !== null && clusterIdx !== undefined && clusterIdx >= 0 
-    ? colors[clusterIdx % colors.length] 
+  return clusterIdx !== null && clusterIdx !== undefined && clusterIdx >= 0
+    ? colors[clusterIdx % colors.length]
     : '#95a5a6'; // 灰色表示噪声点或未分类点
 };
->>>>>>> 847f08304cc3da9224239a0ab4f63164bb632ead
 
 const stepForward = () => {
   if (canStepForward.value) {
@@ -907,7 +899,7 @@ const useDemoData = () => {
       }
     ]
   }
- 
+
 }else if (algorithm.value === 'gmm') {
   // GMM演示数据
   clusteringStore.simulationData = {
@@ -978,10 +970,10 @@ const useDemoData = () => {
 const generateGMMPoints = (count, convergence = 0) => {
   const points = []
   const clusters = 3
-  
+
   for (let i = 0; i < count; i++) {
     let x, y, cluster
-    
+
     if (i < count / 3) {
       // 簇1 - 左上角
       x = 2.5 + (Math.random() - 0.5) * (2 - convergence * 1.5)
@@ -998,11 +990,11 @@ const generateGMMPoints = (count, convergence = 0) => {
       y = 5.0 + (Math.random() - 0.5) * (3 - convergence * 2)
       cluster = 2
     }
-    
+
     // 添加一些随机性
     x += (Math.random() - 0.5) * 0.5
     y += (Math.random() - 0.5) * 0.5
-    
+
     points.push({ x, y, cluster })
   }
   return points
@@ -1012,14 +1004,14 @@ const generateDBSCANPoints = (count, convergence = 0) => {
   const points = []
   const clusters = 3
   const noiseRatio = 0.08 // 噪声点比例
-  
+
   for (let i = 0; i < count; i++) {
     let x, y, cluster
-    
+
     if (i < count * (1 - noiseRatio)) {
       // 正常数据点（属于某个簇）
       const clusterIdx = i % clusters
-      
+
       if (clusterIdx === 0) {
         // 簇1 - 左上角
         x = 2 + Math.random() * 2 + convergence * 0.5
@@ -1042,11 +1034,11 @@ const generateDBSCANPoints = (count, convergence = 0) => {
       y = Math.random() * 10
       cluster = -1 // -1 表示噪声点
     }
-    
+
     // 添加一些随机性
     x += (Math.random() - 0.5) * 0.5
     y += (Math.random() - 0.5) * 0.5
-    
+
     points.push({ x, y, cluster, originalCluster: cluster })
   }
   return points
@@ -1055,7 +1047,7 @@ const generateDemoPoints = (count, convergence = 0) => {
   const points = []
   for (let i = 0; i < count; i++) {
     let x, y, cluster
-    
+
     if (i < count / 3) {
       // 簇1
       x = 2.5 + (Math.random() - 0.5) * 2 + convergence * 0.7
@@ -1072,7 +1064,7 @@ const generateDemoPoints = (count, convergence = 0) => {
       y = 5.0 + (Math.random() - 0.5) * 3
       cluster = 2
     }
-    
+
     points.push({ x, y, cluster })
   }
   return points
@@ -1081,14 +1073,14 @@ const generateDemoPoints = (count, convergence = 0) => {
 // 初始化
 onMounted(() => {
   initializeCanvas()
-  
+
   onUnmounted(() => {
     if (resizeObserver.value) {
       resizeObserver.value.disconnect()
     }
     clearInterval(animationInterval.value)
   })
-  
+
   // 设置 resize observer
   resizeObserver.value = new ResizeObserver(() => {
     if (simulationData.value) {
@@ -1096,15 +1088,15 @@ onMounted(() => {
       renderSimulation()
     }
   })
-  
+
   if (canvasContainer.value) {
     resizeObserver.value.observe(canvasContainer.value)
   }
-  
+
   // 加载配置数据
   clusteringStore.fetchDataTypes()
   clusteringStore.fetchCentroidMethods()
-  
+
   // 开发环境下预加载演示数据
   if (process.env.NODE_ENV === 'development') {
     useDemoData()
